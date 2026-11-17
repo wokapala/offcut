@@ -1,0 +1,43 @@
+# Uruchomienie:  cp .env.example .env  &&  docker compose up --build
+# Aplikacja: http://localhost:8080   Dokumentacja API: http://localhost:8080/api/docs
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-offcut}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Ustaw POSTGRES_PASSWORD w .env}
+      POSTGRES_DB: ${POSTGRES_DB:-offcut}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      OFFCUT_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-offcut}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-offcut}
+      OFFCUT_SECRET_KEY: ${OFFCUT_SECRET_KEY:?Ustaw OFFCUT_SECRET_KEY w .env}
+      OFFCUT_COOKIE_SECURE: ${OFFCUT_COOKIE_SECURE:-false}
+      OFFCUT_CORS_ORIGINS: '["http://localhost:${OFFCUT_HTTP_PORT:-8080}"]'
+      OFFCUT_OPTIMIZER_MAX_NODES: ${OFFCUT_OPTIMIZER_MAX_NODES:-300000}
+      OFFCUT_OPTIMIZER_TIME_LIMIT_S: ${OFFCUT_OPTIMIZER_TIME_LIMIT_S:-3.0}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "${OFFCUT_HTTP_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -1,0 +1,19 @@
+# Baza PostgreSQL wyłącznie do testów backendu (dane w pamięci, port 5433):
+#   docker compose -f docker-compose.test.yml up -d
+#   cd backend && uv run pytest
+services:
+  test-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: offcut
+      POSTGRES_PASSWORD: offcut
+      POSTGRES_DB: offcut_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U offcut -d offcut_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
