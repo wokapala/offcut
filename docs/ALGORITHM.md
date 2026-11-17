@@ -129,6 +129,21 @@ ile jest elementów tej specyfikacji – więcej i tak nie może zostać użytyc
 | elementów w projekcie | 200 | `OFFCUT_MAX_PIECES_PER_PROJECT` |
 | odcinków-kandydatów | 400 | `OFFCUT_MAX_STOCK_CANDIDATES` |
 
+Pomiar (losowe instancje, odcinki 900–3000 mm, elementy 350–1100 mm, rzaz 3 mm, domyślne limity,
+jeden rdzeń):
+
+| Elementów | FFD [mm / odcinki] | B&B [mm / odcinki] | Status B&B | Czas |
+|---|---|---|---|---|
+| 10 | 7 800 / 5 | 6 600 / 3 | `OPTIMAL` (360 węzłów) | < 0,01 s |
+| 20 | 15 600 / 11 | 13 200 / 6 | `BEST_FOUND` (limit węzłów) | 0,7 s |
+| 40 | 30 000 / 19 | 28 800 / 18 | `BEST_FOUND` | 1,0 s |
+| 80 | 63 300 / 45 | 62 100 / 44 | `BEST_FOUND` | 1,8 s |
+| 200 | 145 200 / 81 | 145 200 / 81 | `BEST_FOUND` (brak poprawy) | 3,0 s |
+
+Wniosek: dowód optymalności uzyskujemy dla małych projektów (rzędu kilkunastu elementów – typowy
+projekt majsterkowicza). Dla większych B&B zwraca najlepszy plan znaleziony w limicie – nigdy gorszy
+niż FFD, bo startuje od jego wyniku – i oznacza go jako `BEST_FOUND`, nie `OPTIMAL`.
+
 ## 7. Statusy wyniku
 
 | Status | Znaczenie |
