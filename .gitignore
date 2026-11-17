@@ -1,0 +1,27 @@
+# Sekrety i lokalna konfiguracja
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+
+# Lokalne bazy i dane
+*.sqlite
+*.db
+pgdata/
+
+# Edytory / system
+.vscode/
+.idea/
+.DS_Store
