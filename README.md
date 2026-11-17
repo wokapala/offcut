@@ -90,7 +90,7 @@ Hasło dla wszystkich: `Demo1234!`
 
 Dane demo zawierają projekt „Regał na narzędzia”, w którym branch and bound zużywa 4900 mm materiału
 zamiast 5450 mm z heurystyki, projekt z remisem metod i projekt z brakiem materiału.
-Scenariusz prezentacji: `docs/DEMO.md` (w przygotowaniu).
+Scenariusz prezentacji: [`docs/DEMO.md`](docs/DEMO.md).
 
 ## Testy
 
@@ -112,7 +112,37 @@ na losowych instancjach), brak materiału, niezgodny materiał, limity, logowani
 izolacja warsztatów (także po bezpośrednim ID), pełny przepływ, konflikt i współbieżność rezerwacji,
 ponowienie wykonania, wycofanie transakcji przy błędzie, ograniczenia bazy.
 
-Przepływ w przeglądarce (Playwright) – w przygotowaniu (stan: [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md)).
+Przepływ w przeglądarce (Playwright): logowanie → projekt i zapotrzebowanie → optymalizacja
+(5450 vs 4900 mm) → rezerwacja → wykonanie → resztki w magazynie. Test sam tworzy nowy warsztat przez
+API, więc można go powtarzać. Wymaga działającej aplikacji (`docker compose up`):
+
+```bash
+cd frontend && npm ci && npx playwright install chromium
+```
+
+```bash
+npx playwright test
+```
+
+Inny adres aplikacji: `E2E_BASE_URL=http://localhost:5173 npx playwright test`.
+
+### Frontend w trybie deweloperskim
+
+Backend lokalnie na porcie 8000 (np. `uv run uvicorn app.main:app` z ustawionymi `OFFCUT_DATABASE_URL`
+i `OFFCUT_SECRET_KEY`), potem `cd frontend && npm run dev` → http://localhost:5173 (Vite przekazuje
+`/api` do backendu).
+
+## Zrzuty ekranu
+
+Porównanie metod i schemat rozkroju (projekt „Regał na narzędzia”):
+
+![Porównanie metod](docs/screenshots/04-wynik-porownanie.png)
+
+Plan wykonany – resztki wracają do magazynu:
+
+![Plan wykonany](docs/screenshots/07-plan-wykonany.png)
+
+Pozostałe ekrany: [`docs/screenshots/`](docs/screenshots/).
 
 ## Funkcja zaawansowana: optymalizacja rozkroju 1D
 
@@ -135,7 +165,7 @@ Szczegóły, przykłady i ograniczenia: [`docs/ALGORITHM.md`](docs/ALGORITHM.md)
 | [`docs/ALGORITHM.md`](docs/ALGORITHM.md) | model rzazu, funkcja celu, algorytmy, limity, statusy, przykład |
 | [`docs/ERD.md`](docs/ERD.md) | diagram ERD i ograniczenia bazy |
 | [`docs/API.md`](docs/API.md) + Swagger | kluczowe operacje, uprawnienia, błędy |
-| `docs/DEMO.md` | scenariusz demonstracji 3–5 min (w przygotowaniu) |
+| [`docs/DEMO.md`](docs/DEMO.md) | scenariusz demonstracji 3–5 min |
 | [`docs/DEFENSE_NOTES.md`](docs/DEFENSE_NOTES.md) | decyzje, reguły biznesowe, pytania |
 | [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) | stan prac i weryfikacji |
 
