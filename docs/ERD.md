@@ -1,7 +1,8 @@
 # Diagram ERD
 
 Diagram odpowiada migracji `backend/alembic/versions/0001_initial_schema.py` (sprawdzony z
-`information_schema` bazy po `alembic upgrade head`). GitHub renderuje blok Mermaid automatycznie.
+`information_schema` bazy po `alembic upgrade head`). GitHub renderuje blok Mermaid automatycznie;
+wersja graficzna: [`erd.png`](erd.png).
 
 ```mermaid
 erDiagram
