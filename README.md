@@ -37,17 +37,51 @@ Zależności są zablokowane: `backend/uv.lock` (+ `backend/requirements.txt` z 
 
 ## Uruchomienie (Docker Compose)
 
-Wymagania: Docker z Compose v2.
+Wymagania: Docker z Compose v2 (Docker Desktop na Windows/macOS) oraz Git.
+
+**1. Pobranie projektu**
+
+```bash
+git clone https://github.com/wokapala/offcut.git
+```
+
+```bash
+cd offcut
+```
+
+**2. Plik konfiguracyjny** (Linux/macOS; w PowerShell: `Copy-Item .env.example .env`)
 
 ```bash
 cp .env.example .env
 ```
 
-W `.env` ustaw własne `POSTGRES_PASSWORD` i `OFFCUT_SECRET_KEY`
-(np. `python -c "import secrets; print(secrets.token_urlsafe(48))"`). Następnie:
+Wartości z `.env.example` wystarczą do lokalnego uruchomienia. Poza komputerem lokalnym zmień
+`POSTGRES_PASSWORD` i `OFFCUT_SECRET_KEY` (np. wynik `python -c "import secrets; print(secrets.token_urlsafe(48))"`).
+
+**3. Budowa i start** (baza, migracje, backend, frontend)
 
 ```bash
 docker compose up --build -d
+```
+
+**4. Sprawdzenie, czy wszystko działa** (backend i baza powinny mieć stan `healthy`)
+
+```bash
+docker compose ps
+```
+
+**5. Dane demonstracyjne** (opcjonalne, bezpieczne do ponownego uruchomienia)
+
+```bash
+docker compose exec backend python -m app.seed
+```
+
+**6. Aplikacja:** http://localhost:8080 – logowanie `wlasciciel@offcut.demo` / `Demo1234!`.
+
+Zatrzymanie (dane zostają w wolumenie):
+
+```bash
+docker compose down
 ```
 
 | Usługa | Adres |
