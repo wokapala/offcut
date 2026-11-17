@@ -34,6 +34,9 @@ from app.models import (
 )
 
 
+STATUS_PL = {AVAILABLE: "dostępny", RESERVED: "zarezerwowany", CONSUMED: "zużyty", "DISCARDED": "wycofany"}
+
+
 def _lock_plan(db: Session, user: User, plan_id: int):
     plan, access = load_scoped(db, user, CuttingPlan, plan_id,
                                lambda p: p.project.workshop_id, "plan", for_update=True)
@@ -69,7 +72,8 @@ def reserve_plan(db: Session, user: User, plan_id: int) -> CuttingPlan:
     stock = _lock_stock(db, ids)
     unavailable = [s for s in stock if s.status != AVAILABLE]
     if len(stock) != len(ids) or unavailable:
-        details = [f"Odcinek #{s.id} ({s.length_mm} mm) ma status {s.status}" for s in unavailable]
+        details = [f"Odcinek #{s.id} ({s.length_mm} mm) jest {STATUS_PL.get(s.status, s.status)}"
+                   for s in unavailable]
         raise Conflict(
             "Część odcinków z planu nie jest już dostępna (zarezerwowana lub zużyta). "
             "Wygeneruj plan ponownie.",
