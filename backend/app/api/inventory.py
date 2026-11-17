@@ -29,7 +29,8 @@ router = APIRouter(prefix="/api", tags=["workshop"])
 # --- Członkowie ------------------------------------------------------------------
 
 
-@router.get("/workshops/{workshop_id}/members", response_model=list[schemas.MemberOut])
+@router.get("/workshops/{workshop_id}/members", response_model=list[schemas.MemberOut],
+            summary="Członkowie warsztatu i ich role")
 def list_members(workshop_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     workshop_access(db, user, workshop_id)
     rows = db.execute(
@@ -61,7 +62,8 @@ def add_member(workshop_id: int, body: schemas.MemberIn, user: User = Depends(ge
 # --- Specyfikacje materiałów ---------------------------------------------------------
 
 
-@router.get("/workshops/{workshop_id}/materials", response_model=list[schemas.MaterialSpecOut])
+@router.get("/workshops/{workshop_id}/materials", response_model=list[schemas.MaterialSpecOut],
+            summary="Specyfikacje materiałów (materiał + przekrój)")
 def list_materials(workshop_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     workshop_access(db, user, workshop_id)
     specs = db.scalars(
@@ -71,7 +73,8 @@ def list_materials(workshop_id: int, user: User = Depends(get_current_user), db:
     return [spec_out(s) for s in specs]
 
 
-@router.post("/workshops/{workshop_id}/materials", response_model=schemas.MaterialSpecOut, status_code=201)
+@router.post("/workshops/{workshop_id}/materials", response_model=schemas.MaterialSpecOut, status_code=201,
+             summary="Nowa specyfikacja materiału (właściciel)")
 def create_material(workshop_id: int, body: schemas.MaterialSpecIn, user: User = Depends(get_current_user),
                     db: Session = Depends(get_db)):
     workshop_access(db, user, workshop_id).require_owner()
@@ -145,7 +148,7 @@ def create_stock(workshop_id: int, body: schemas.StockCreateIn, user: User = Dep
     return stock_out_many(db, items)
 
 
-@router.get("/stock/{stock_id}", response_model=schemas.StockOut)
+@router.get("/stock/{stock_id}", response_model=schemas.StockOut, summary="Szczegóły odcinka z pochodzeniem")
 def get_stock(stock_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     item, _ = load_scoped(db, user, StockItem, stock_id, lambda s: s.workshop_id, "odcinek")
     return stock_out_many(db, [item])[0]

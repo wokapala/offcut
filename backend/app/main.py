@@ -38,7 +38,7 @@ def create_app() -> FastAPI:
     app.include_router(inventory.router)
     app.include_router(projects.router)
 
-    @app.get("/api/health", tags=["system"])
+    @app.get("/api/health", tags=["system"], summary="Stan usługi i połączenia z bazą")
     def health():
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))

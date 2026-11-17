@@ -1,0 +1,2943 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Offcut API",
+    "description": "\nREST API aplikacji **Offcut** – planowanie cięcia listew i profili z wykorzystaniem resztek.\n\n**Uwierzytelnianie:** `POST /api/auth/login` ustawia cookie sesji (HttpOnly) i zwraca `csrf_token`.\nKażde żądanie zmieniające stan (POST/PATCH/DELETE) wymaga nagłówka `X-CSRF-Token`.\nW Swagger UI: zaloguj się, skopiuj `csrf_token` i wklej go w *Authorize → X-CSRF-Token*.\n\n**Format błędów:** `{\"detail\": \"...\", \"code\": \"...\", \"problems\": [...]}`\n– 401 brak sesji, 403 brak uprawnień / CSRF, 404 brak zasobu lub cudzy warsztat,\n409 konflikt stanu (rezerwacja, nieaktualny plan), 422 błędne dane.\n\nWszystkie długości są liczbami całkowitymi w milimetrach.\n",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Rejestracja: nowe konto i nowy warsztat (rola właściciela)",
+        "operationId": "register_api_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logowanie – ustawia cookie sesji (HttpOnly) i zwraca token CSRF",
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nieprawidłowy e-mail lub hasło"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Wylogowanie (wymaga X-CSRF-Token)",
+        "operationId": "logout_api_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Bieżący użytkownik i jego warsztaty",
+        "operationId": "me_api_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/api/workshops/{workshop_id}/members": {
+      "get": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Członkowie warsztatu i ich role",
+        "operationId": "list_members_api_workshops__workshop_id__members_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workshop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Workshop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemberOut"
+                  },
+                  "title": "Response List Members Api Workshops  Workshop Id  Members Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Dodanie członka warsztatu (tylko właściciel)",
+        "operationId": "add_member_api_workshops__workshop_id__members_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workshop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Workshop Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workshops/{workshop_id}/materials": {
+      "get": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Specyfikacje materiałów (materiał + przekrój)",
+        "operationId": "list_materials_api_workshops__workshop_id__materials_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workshop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Workshop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MaterialSpecOut"
+                  },
+                  "title": "Response List Materials Api Workshops  Workshop Id  Materials Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Nowa specyfikacja materiału (właściciel)",
+        "operationId": "create_material_api_workshops__workshop_id__materials_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workshop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Workshop Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaterialSpecIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialSpecOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/materials/{spec_id}": {
+      "delete": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Usunięcie nieużywanej specyfikacji",
+        "operationId": "delete_material_api_materials__spec_id__delete",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spec_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Spec Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workshops/{workshop_id}/stock": {
+      "get": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Magazyn odcinków i resztek z filtrami",
+        "operationId": "list_stock_api_workshops__workshop_id__stock_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workshop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Workshop Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "AVAILABLE",
+                    "RESERVED",
+                    "CONSUMED",
+                    "DISCARDED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "const": "ALL",
+                  "type": "string"
+                }
+              ],
+              "default": "AVAILABLE",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "material_spec_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Material Spec Id"
+            }
+          },
+          {
+            "name": "remnants_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Remnants Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StockOut"
+                  },
+                  "title": "Response List Stock Api Workshops  Workshop Id  Stock Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Przyjęcie odcinków na magazyn (każda sztuka jako osobny odcinek)",
+        "operationId": "create_stock_api_workshops__workshop_id__stock_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workshop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Workshop Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockCreateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StockOut"
+                  },
+                  "title": "Response Create Stock Api Workshops  Workshop Id  Stock Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stock/{stock_id}": {
+      "get": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Szczegóły odcinka z pochodzeniem",
+        "operationId": "get_stock_api_stock__stock_id__get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "stock_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Stock Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Wycofanie odcinka z magazynu (status DISCARDED, historia zostaje)",
+        "operationId": "discard_stock_api_stock__stock_id__delete",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "stock_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Stock Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workshops/{workshop_id}/projects": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Lista projektów cięcia",
+        "operationId": "list_projects_api_workshops__workshop_id__projects_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workshop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Workshop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectListItem"
+                  },
+                  "title": "Response List Projects Api Workshops  Workshop Id  Projects Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Nowy projekt cięcia z parametrami rzazu i progu resztki (właściciel)",
+        "operationId": "create_project_api_workshops__workshop_id__projects_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workshop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Workshop Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectCreateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Projekt z zapotrzebowaniem i stanem (OPEN / RESERVED / EXECUTED)",
+        "operationId": "get_project_api_projects__project_id__get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Zmiana nazwy lub parametrów (zmiana rzazu/progu unieważnia stare plany)",
+        "operationId": "update_project_api_projects__project_id__patch",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectUpdateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt stanu (np. projekt zablokowany rezerwacją)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/demand": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Dodanie pozycji zapotrzebowania (unieważnia stare plany)",
+        "operationId": "add_demand_api_projects__project_id__demand_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemandIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt stanu (np. projekt zablokowany rezerwacją)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/demand/{demand_id}": {
+      "patch": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Zmiana pozycji zapotrzebowania (unieważnia stare plany)",
+        "operationId": "update_demand_api_demand__demand_id__patch",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "demand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Demand Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemandUpdateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt stanu (np. projekt zablokowany rezerwacją)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Usunięcie pozycji zapotrzebowania (unieważnia stare plany)",
+        "operationId": "delete_demand_api_demand__demand_id__delete",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "demand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Demand Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt stanu (np. projekt zablokowany rezerwacją)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/optimize": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Optymalizacja rozkroju: heurystyka FFD i branch and bound dla tych samych danych",
+        "operationId": "optimize_api_projects__project_id__optimize_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OptimizeOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt stanu (np. projekt zablokowany rezerwacją)"
+          },
+          "422": {
+            "description": "Brak zapotrzebowania lub zbyt duży problem"
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/plans": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Historia planów projektu (z flagą is_current)",
+        "operationId": "list_plans_api_projects__project_id__plans_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlanOut"
+                  },
+                  "title": "Response List Plans Api Projects  Project Id  Plans Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/plans/manual": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Plan ręczny – sprawdzany tym samym walidatorem co wyniki algorytmów",
+        "operationId": "manual_plan_api_projects__project_id__plans_manual_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualPlanIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt stanu (np. projekt zablokowany rezerwacją)"
+          },
+          "422": {
+            "description": "Plan nie przeszedł walidacji bilansu"
+          }
+        }
+      }
+    },
+    "/api/plans/{plan_id}": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Szczegóły planu: odcinki, elementy, rzaz, resztki, statystyki",
+        "operationId": "get_plan_api_plans__plan_id__get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plans/{plan_id}/reserve": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Rezerwacja odcinków planu (właściciel). 409 gdy odcinek zajęty lub plan nieaktualny",
+        "operationId": "reserve_api_plans__plan_id__reserve_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt stanu (np. projekt zablokowany rezerwacją)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plans/{plan_id}/release": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Zwolnienie rezerwacji: plan wraca do DRAFT, odcinki do AVAILABLE",
+        "operationId": "release_api_plans__plan_id__release_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt stanu (np. projekt zablokowany rezerwacją)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plans/{plan_id}/execute": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Zatwierdzenie wykonania (właściciel lub operator). Idempotentne przy ponowieniu",
+        "operationId": "execute_api_plans__plan_id__execute_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt stanu (np. projekt zablokowany rezerwacją)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workshops/{workshop_id}/summary": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Liczniki magazynu dla nagłówka UI",
+        "operationId": "summary_api_workshops__workshop_id__summary_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workshop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Workshop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Stan usługi i połączenia z bazą",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ComparisonOut": {
+        "properties": {
+          "stock_saved_mm": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock Saved Mm",
+            "description": "O ile mniej materiału zużywa B&B niż heurystyka"
+          },
+          "bars_saved": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bars Saved"
+          },
+          "waste_saved_mm": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waste Saved Mm"
+          },
+          "verdict": {
+            "type": "string",
+            "title": "Verdict"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stock_saved_mm",
+          "bars_saved",
+          "waste_saved_mm",
+          "verdict"
+        ],
+        "title": "ComparisonOut"
+      },
+      "DemandIn": {
+        "properties": {
+          "material_spec_id": {
+            "type": "integer",
+            "title": "Material Spec Id"
+          },
+          "length_mm": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Length Mm",
+            "description": "Długość w mm (liczba całkowita > 0)"
+          },
+          "quantity": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Quantity"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material_spec_id",
+          "length_mm",
+          "quantity"
+        ],
+        "title": "DemandIn"
+      },
+      "DemandOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "material_spec_id": {
+            "type": "integer",
+            "title": "Material Spec Id"
+          },
+          "spec_label": {
+            "type": "string",
+            "title": "Spec Label"
+          },
+          "length_mm": {
+            "type": "integer",
+            "title": "Length Mm"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "material_spec_id",
+          "spec_label",
+          "length_mm",
+          "quantity",
+          "label"
+        ],
+        "title": "DemandOut"
+      },
+      "DemandUpdateIn": {
+        "properties": {
+          "material_spec_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Material Spec Id"
+          },
+          "length_mm": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100000.0,
+                "exclusiveMinimum": 0.0,
+                "description": "Długość w mm (liczba całkowita > 0)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Length Mm"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 500.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "title": "DemandUpdateIn"
+      },
+      "ExecuteOut": {
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/PlanOut"
+          },
+          "already_executed": {
+            "type": "boolean",
+            "title": "Already Executed",
+            "description": "True przy ponowieniu – nic nie zużyto drugi raz"
+          },
+          "remnants": {
+            "items": {
+              "$ref": "#/components/schemas/StockOut"
+            },
+            "type": "array",
+            "title": "Remnants"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan",
+          "already_executed",
+          "remnants"
+        ],
+        "title": "ExecuteOut"
+      },
+      "ExecutionOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "executed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Executed At"
+          },
+          "executed_by": {
+            "type": "string",
+            "title": "Executed By"
+          },
+          "remnant_stock_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Remnant Stock Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "executed_at",
+          "executed_by",
+          "remnant_stock_ids"
+        ],
+        "title": "ExecutionOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginIn": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginIn"
+      },
+      "LoginOut": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/MeOut"
+          },
+          "csrf_token": {
+            "type": "string",
+            "title": "Csrf Token",
+            "description": "Wysyłaj w nagłówku X-CSRF-Token przy POST/PATCH/DELETE"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "csrf_token"
+        ],
+        "title": "LoginOut"
+      },
+      "ManualBarIn": {
+        "properties": {
+          "stock_item_id": {
+            "type": "integer",
+            "title": "Stock Item Id"
+          },
+          "demand_item_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Demand Item Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stock_item_id",
+          "demand_item_ids"
+        ],
+        "title": "ManualBarIn"
+      },
+      "ManualPlanIn": {
+        "properties": {
+          "bars": {
+            "items": {
+              "$ref": "#/components/schemas/ManualBarIn"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Bars"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bars"
+        ],
+        "title": "ManualPlanIn"
+      },
+      "MaterialSpecIn": {
+        "properties": {
+          "material": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Material",
+            "examples": [
+              "Sosna"
+            ]
+          },
+          "section": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Section",
+            "examples": [
+              "40x20 mm"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "material",
+          "section"
+        ],
+        "title": "MaterialSpecIn"
+      },
+      "MaterialSpecOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "material": {
+            "type": "string",
+            "title": "Material"
+          },
+          "section": {
+            "type": "string",
+            "title": "Section"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "material",
+          "section",
+          "label"
+        ],
+        "title": "MaterialSpecOut"
+      },
+      "MeOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "memberships": {
+            "items": {
+              "$ref": "#/components/schemas/MembershipOut"
+            },
+            "type": "array",
+            "title": "Memberships"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "full_name",
+          "memberships"
+        ],
+        "title": "MeOut"
+      },
+      "MemberIn": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "title": "Email"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Full Name"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password",
+            "description": "Hasło nowego konta (ignorowane, gdy konto już istnieje)"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "OPERATOR"
+            ],
+            "title": "Role",
+            "default": "OPERATOR"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "full_name",
+          "password"
+        ],
+        "title": "MemberIn"
+      },
+      "MemberOut": {
+        "properties": {
+          "user_id": {
+            "type": "integer",
+            "title": "User Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "OPERATOR"
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "email",
+          "full_name",
+          "role"
+        ],
+        "title": "MemberOut"
+      },
+      "MembershipOut": {
+        "properties": {
+          "workshop_id": {
+            "type": "integer",
+            "title": "Workshop Id"
+          },
+          "workshop_name": {
+            "type": "string",
+            "title": "Workshop Name"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "OPERATOR"
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workshop_id",
+          "workshop_name",
+          "role"
+        ],
+        "title": "MembershipOut"
+      },
+      "MethodResultOut": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "GREEDY",
+              "BRANCH_AND_BOUND",
+              "MANUAL"
+            ],
+            "title": "Method"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "HEURISTIC",
+              "OPTIMAL",
+              "BEST_FOUND",
+              "INFEASIBLE",
+              "NO_SOLUTION_IN_LIMIT",
+              "MANUAL"
+            ],
+            "title": "Status"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unplaced_count": {
+            "type": "integer",
+            "title": "Unplaced Count"
+          },
+          "nodes": {
+            "type": "integer",
+            "title": "Nodes"
+          },
+          "elapsed_ms": {
+            "type": "integer",
+            "title": "Elapsed Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "method",
+          "status",
+          "plan",
+          "unplaced_count",
+          "nodes",
+          "elapsed_ms"
+        ],
+        "title": "MethodResultOut"
+      },
+      "OptimizeOut": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "greedy": {
+            "$ref": "#/components/schemas/MethodResultOut"
+          },
+          "branch_and_bound": {
+            "$ref": "#/components/schemas/MethodResultOut"
+          },
+          "comparison": {
+            "$ref": "#/components/schemas/ComparisonOut"
+          },
+          "shortages": {
+            "items": {
+              "$ref": "#/components/schemas/ShortageOut"
+            },
+            "type": "array",
+            "title": "Shortages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "greedy",
+          "branch_and_bound",
+          "comparison",
+          "shortages"
+        ],
+        "title": "OptimizeOut"
+      },
+      "PlanBarOut": {
+        "properties": {
+          "stock_item_id": {
+            "type": "integer",
+            "title": "Stock Item Id"
+          },
+          "spec_label": {
+            "type": "string",
+            "title": "Spec Label"
+          },
+          "stock_length_mm": {
+            "type": "integer",
+            "title": "Stock Length Mm"
+          },
+          "stock_is_remnant": {
+            "type": "boolean",
+            "title": "Stock Is Remnant"
+          },
+          "stock_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock Label"
+          },
+          "cut_count": {
+            "type": "integer",
+            "title": "Cut Count"
+          },
+          "kerf_loss_mm": {
+            "type": "integer",
+            "title": "Kerf Loss Mm"
+          },
+          "remainder_mm": {
+            "type": "integer",
+            "title": "Remainder Mm"
+          },
+          "usable_remnant": {
+            "type": "boolean",
+            "title": "Usable Remnant"
+          },
+          "pieces": {
+            "items": {
+              "$ref": "#/components/schemas/PlanPieceOut"
+            },
+            "type": "array",
+            "title": "Pieces"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stock_item_id",
+          "spec_label",
+          "stock_length_mm",
+          "stock_is_remnant",
+          "stock_label",
+          "cut_count",
+          "kerf_loss_mm",
+          "remainder_mm",
+          "usable_remnant",
+          "pieces"
+        ],
+        "title": "PlanBarOut"
+      },
+      "PlanOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "integer",
+            "title": "Project Id"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "GREEDY",
+              "BRANCH_AND_BOUND",
+              "MANUAL"
+            ],
+            "title": "Method"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "RESERVED",
+              "EXECUTED"
+            ],
+            "title": "Status"
+          },
+          "solver_status": {
+            "type": "string",
+            "enum": [
+              "HEURISTIC",
+              "OPTIMAL",
+              "BEST_FOUND",
+              "INFEASIBLE",
+              "NO_SOLUTION_IN_LIMIT",
+              "MANUAL"
+            ],
+            "title": "Solver Status"
+          },
+          "is_current": {
+            "type": "boolean",
+            "title": "Is Current",
+            "description": "False, gdy projekt zmienił się po wygenerowaniu planu"
+          },
+          "project_revision": {
+            "type": "integer",
+            "title": "Project Revision"
+          },
+          "kerf_mm": {
+            "type": "integer",
+            "title": "Kerf Mm"
+          },
+          "min_remnant_mm": {
+            "type": "integer",
+            "title": "Min Remnant Mm"
+          },
+          "total_stock_mm": {
+            "type": "integer",
+            "title": "Total Stock Mm"
+          },
+          "stock_count": {
+            "type": "integer",
+            "title": "Stock Count"
+          },
+          "pieces_mm": {
+            "type": "integer",
+            "title": "Pieces Mm"
+          },
+          "kerf_loss_mm": {
+            "type": "integer",
+            "title": "Kerf Loss Mm"
+          },
+          "usable_remnant_mm": {
+            "type": "integer",
+            "title": "Usable Remnant Mm"
+          },
+          "scrap_mm": {
+            "type": "integer",
+            "title": "Scrap Mm"
+          },
+          "waste_mm": {
+            "type": "integer",
+            "title": "Waste Mm",
+            "description": "Odpad = rzaz + nieużyteczne pozostałości"
+          },
+          "lower_bound_mm": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower Bound Mm"
+          },
+          "nodes": {
+            "type": "integer",
+            "title": "Nodes"
+          },
+          "elapsed_ms": {
+            "type": "integer",
+            "title": "Elapsed Ms"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "reserved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reserved At"
+          },
+          "executed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Executed At"
+          },
+          "bars": {
+            "items": {
+              "$ref": "#/components/schemas/PlanBarOut"
+            },
+            "type": "array",
+            "title": "Bars"
+          },
+          "execution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExecutionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "run_id",
+          "method",
+          "status",
+          "solver_status",
+          "is_current",
+          "project_revision",
+          "kerf_mm",
+          "min_remnant_mm",
+          "total_stock_mm",
+          "stock_count",
+          "pieces_mm",
+          "kerf_loss_mm",
+          "usable_remnant_mm",
+          "scrap_mm",
+          "waste_mm",
+          "lower_bound_mm",
+          "nodes",
+          "elapsed_ms",
+          "created_at",
+          "reserved_at",
+          "executed_at",
+          "bars",
+          "execution"
+        ],
+        "title": "PlanOut"
+      },
+      "PlanPieceOut": {
+        "properties": {
+          "demand_item_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Demand Item Id"
+          },
+          "length_mm": {
+            "type": "integer",
+            "title": "Length Mm"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "demand_item_id",
+          "length_mm",
+          "label"
+        ],
+        "title": "PlanPieceOut"
+      },
+      "ProjectCreateIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "kerf_mm": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 0.0,
+            "title": "Kerf Mm",
+            "description": "Szerokość rzazu (mm)",
+            "default": 3
+          },
+          "min_remnant_mm": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 0.0,
+            "title": "Min Remnant Mm",
+            "description": "Minimalna długość użytecznej resztki (mm)",
+            "default": 300
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ProjectCreateIn"
+      },
+      "ProjectListItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "RESERVED",
+              "EXECUTED"
+            ],
+            "title": "State"
+          },
+          "kerf_mm": {
+            "type": "integer",
+            "title": "Kerf Mm"
+          },
+          "min_remnant_mm": {
+            "type": "integer",
+            "title": "Min Remnant Mm"
+          },
+          "demand_lines": {
+            "type": "integer",
+            "title": "Demand Lines"
+          },
+          "piece_count": {
+            "type": "integer",
+            "title": "Piece Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "state",
+          "kerf_mm",
+          "min_remnant_mm",
+          "demand_lines",
+          "piece_count",
+          "created_at"
+        ],
+        "title": "ProjectListItem"
+      },
+      "ProjectOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "workshop_id": {
+            "type": "integer",
+            "title": "Workshop Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kerf_mm": {
+            "type": "integer",
+            "title": "Kerf Mm"
+          },
+          "min_remnant_mm": {
+            "type": "integer",
+            "title": "Min Remnant Mm"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "RESERVED",
+              "EXECUTED"
+            ],
+            "title": "State"
+          },
+          "active_plan_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Plan Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "demand_items": {
+            "items": {
+              "$ref": "#/components/schemas/DemandOut"
+            },
+            "type": "array",
+            "title": "Demand Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workshop_id",
+          "name",
+          "kerf_mm",
+          "min_remnant_mm",
+          "revision",
+          "state",
+          "active_plan_id",
+          "created_at",
+          "demand_items"
+        ],
+        "title": "ProjectOut"
+      },
+      "ProjectUpdateIn": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "kerf_mm": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kerf Mm"
+          },
+          "min_remnant_mm": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Remnant Mm"
+          }
+        },
+        "type": "object",
+        "title": "ProjectUpdateIn"
+      },
+      "RegisterIn": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Full Name"
+          },
+          "workshop_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Workshop Name",
+            "description": "Nazwa nowego warsztatu – rejestrujący zostaje właścicielem"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "full_name",
+          "workshop_name"
+        ],
+        "title": "RegisterIn"
+      },
+      "ShortageOut": {
+        "properties": {
+          "material_spec_id": {
+            "type": "integer",
+            "title": "Material Spec Id"
+          },
+          "spec_label": {
+            "type": "string",
+            "title": "Spec Label"
+          },
+          "piece_count": {
+            "type": "integer",
+            "title": "Piece Count"
+          },
+          "pieces_mm": {
+            "type": "integer",
+            "title": "Pieces Mm"
+          },
+          "longest_piece_mm": {
+            "type": "integer",
+            "title": "Longest Piece Mm"
+          },
+          "available_count": {
+            "type": "integer",
+            "title": "Available Count"
+          },
+          "available_mm": {
+            "type": "integer",
+            "title": "Available Mm"
+          },
+          "longest_available_mm": {
+            "type": "integer",
+            "title": "Longest Available Mm"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material_spec_id",
+          "spec_label",
+          "piece_count",
+          "pieces_mm",
+          "longest_piece_mm",
+          "available_count",
+          "available_mm",
+          "longest_available_mm",
+          "message"
+        ],
+        "title": "ShortageOut"
+      },
+      "StockCreateIn": {
+        "properties": {
+          "material_spec_id": {
+            "type": "integer",
+            "title": "Material Spec Id"
+          },
+          "length_mm": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Length Mm",
+            "description": "Długość w mm (liczba całkowita > 0)"
+          },
+          "quantity": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Quantity",
+            "description": "Ile fizycznych odcinków utworzyć – każdy dostaje własne ID",
+            "default": 1
+          },
+          "is_remnant": {
+            "type": "boolean",
+            "title": "Is Remnant",
+            "default": false
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material_spec_id",
+          "length_mm"
+        ],
+        "title": "StockCreateIn"
+      },
+      "StockOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "material_spec_id": {
+            "type": "integer",
+            "title": "Material Spec Id"
+          },
+          "spec_label": {
+            "type": "string",
+            "title": "Spec Label"
+          },
+          "length_mm": {
+            "type": "integer",
+            "title": "Length Mm"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "RESERVED",
+              "CONSUMED",
+              "DISCARDED"
+            ],
+            "title": "Status"
+          },
+          "is_remnant": {
+            "type": "boolean",
+            "title": "Is Remnant"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "reserved_plan_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reserved Plan Id"
+          },
+          "parent_stock_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Stock Id"
+          },
+          "source_execution_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Execution Id"
+          },
+          "source_plan_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Plan Id",
+            "description": "Plan, z którego wykonania powstała resztka"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "consumed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consumed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "material_spec_id",
+          "spec_label",
+          "length_mm",
+          "status",
+          "is_remnant",
+          "label",
+          "reserved_plan_id",
+          "parent_stock_id",
+          "source_execution_id",
+          "created_at",
+          "consumed_at"
+        ],
+        "title": "StockOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyCookie": {
+        "type": "apiKey",
+        "description": "Cookie sesji ustawiane przez /api/auth/login",
+        "in": "cookie",
+        "name": "offcut_session"
+      },
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "description": "Wartość csrf_token z odpowiedzi logowania",
+        "in": "header",
+        "name": "X-CSRF-Token"
+      }
+    }
+  }
+}

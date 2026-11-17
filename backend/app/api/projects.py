@@ -9,7 +9,7 @@ from app.api.serializers import optimize_out, plan_out, project_out, stock_out_m
 from app.db import get_db
 from app.deps import get_current_user, load_scoped, workshop_access
 from app.errors import NotFound
-from app.models import CuttingPlan, DemandItem, MaterialSpec, Project, User
+from app.models import CuttingPlan, DemandItem, MaterialSpec, Project, StockItem, User
 from app.services import planning, workflow
 
 router = APIRouter(prefix="/api", tags=["projects"])
@@ -27,7 +27,8 @@ def _spec_check(db: Session, spec_id: int, workshop_id: int) -> None:
         raise NotFound("Nie znaleziono specyfikacji materiału w tym warsztacie")
 
 
-@router.get("/workshops/{workshop_id}/projects", response_model=list[schemas.ProjectListItem])
+@router.get("/workshops/{workshop_id}/projects", response_model=list[schemas.ProjectListItem],
+            summary="Lista projektów cięcia")
 def list_projects(workshop_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     workshop_access(db, user, workshop_id)
     projects = db.scalars(select(Project).where(Project.workshop_id == workshop_id).order_by(Project.id.desc()))
@@ -42,7 +43,8 @@ def list_projects(workshop_id: int, user: User = Depends(get_current_user), db: 
     return out
 
 
-@router.post("/workshops/{workshop_id}/projects", response_model=schemas.ProjectOut, status_code=201)
+@router.post("/workshops/{workshop_id}/projects", response_model=schemas.ProjectOut, status_code=201,
+             summary="Nowy projekt cięcia z parametrami rzazu i progu resztki (właściciel)")
 def create_project(workshop_id: int, body: schemas.ProjectCreateIn, user: User = Depends(get_current_user),
                    db: Session = Depends(get_db)):
     workshop_access(db, user, workshop_id).require_owner()
@@ -53,7 +55,8 @@ def create_project(workshop_id: int, body: schemas.ProjectCreateIn, user: User =
     return project_out(db, project)
 
 
-@router.get("/projects/{project_id}", response_model=schemas.ProjectOut)
+@router.get("/projects/{project_id}", response_model=schemas.ProjectOut,
+            summary="Projekt z zapotrzebowaniem i stanem (OPEN / RESERVED / EXECUTED)")
 def get_project(project_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project, _ = _project(db, user, project_id)
     return project_out(db, project)
@@ -78,7 +81,7 @@ def update_project(project_id: int, body: schemas.ProjectUpdateIn, user: User = 
 
 
 @router.post("/projects/{project_id}/demand", response_model=schemas.ProjectOut, status_code=201,
-             responses=CONFLICT)
+             responses=CONFLICT, summary="Dodanie pozycji zapotrzebowania (unieważnia stare plany)")
 def add_demand(project_id: int, body: schemas.DemandIn, user: User = Depends(get_current_user),
                db: Session = Depends(get_db)):
     project, access = _project(db, user, project_id)
@@ -99,7 +102,8 @@ def _demand(db: Session, user: User, demand_id: int):
     return item
 
 
-@router.patch("/demand/{demand_id}", response_model=schemas.ProjectOut, responses=CONFLICT)
+@router.patch("/demand/{demand_id}", response_model=schemas.ProjectOut, responses=CONFLICT,
+              summary="Zmiana pozycji zapotrzebowania (unieważnia stare plany)")
 def update_demand(demand_id: int, body: schemas.DemandUpdateIn, user: User = Depends(get_current_user),
                   db: Session = Depends(get_db)):
     item = _demand(db, user, demand_id)
@@ -116,7 +120,8 @@ def update_demand(demand_id: int, body: schemas.DemandUpdateIn, user: User = Dep
     return project_out(db, project)
 
 
-@router.delete("/demand/{demand_id}", response_model=schemas.ProjectOut, responses=CONFLICT)
+@router.delete("/demand/{demand_id}", response_model=schemas.ProjectOut, responses=CONFLICT,
+               summary="Usunięcie pozycji zapotrzebowania (unieważnia stare plany)")
 def delete_demand(demand_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     item = _demand(db, user, demand_id)
     project = planning.lock_project_for_change(db, item.project_id)
@@ -136,7 +141,8 @@ def optimize(project_id: int, user: User = Depends(get_current_user), db: Sessio
     return optimize_out(db, planning.optimize_project(db, project, user))
 
 
-@router.get("/projects/{project_id}/plans", response_model=list[schemas.PlanOut])
+@router.get("/projects/{project_id}/plans", response_model=list[schemas.PlanOut],
+            summary="Historia planów projektu (z flagą is_current)")
 def list_plans(project_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project, _ = _project(db, user, project_id)
     plans = db.scalars(select(CuttingPlan).where(CuttingPlan.project_id == project.id)
@@ -159,7 +165,8 @@ def manual_plan(project_id: int, body: schemas.ManualPlanIn, user: User = Depend
 # --- Plany ---------------------------------------------------------------------------
 
 
-@router.get("/plans/{plan_id}", response_model=schemas.PlanOut)
+@router.get("/plans/{plan_id}", response_model=schemas.PlanOut,
+            summary="Szczegóły planu: odcinki, elementy, rzaz, resztki, statystyki")
 def get_plan(plan_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     plan, _ = load_scoped(db, user, CuttingPlan, plan_id, lambda p: p.project.workshop_id, "plan")
     return plan_out(db, plan)
@@ -187,8 +194,6 @@ def execute(plan_id: int, user: User = Depends(get_current_user), db: Session = 
 
 @router.get("/workshops/{workshop_id}/summary", summary="Liczniki magazynu dla nagłówka UI")
 def summary(workshop_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    from app.models import StockItem
-
     workshop_access(db, user, workshop_id)
     rows = db.execute(
         select(StockItem.status, func.count(), func.coalesce(func.sum(StockItem.length_mm), 0))
