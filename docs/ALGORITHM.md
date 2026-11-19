@@ -184,6 +184,22 @@ a resztki 1250, 1400 i 900 mm zostają w magazynie nietknięte. Liczby są spraw
 `test_demo_case_branch_and_bound_beats_greedy` (wynik B&B zgodny z pełnym przeglądem) i testem
 API `test_full_flow_login_demand_optimize_reserve_execute_remnants`.
 
+### Większy przykład (dane demo „Stojak na drewno kominkowe”)
+
+Świerk 45×45 mm, rzaz 3 mm, próg 300 mm. Magazyn: resztki 2100, 1300, 1100, 850, 700 mm i 5 nowych
+kantówek 2700 mm. Zapotrzebowanie: 4 × 1150, 4 × 760, 3 × 520, 2 × 420 mm (13 elementów, 10 040 mm).
+
+| Metoda | Zużycie | Odcinki | Odpad | Uwagi |
+|---|---|---|---|---|
+| FFD | 14 150 mm | 8 | 734 mm | m.in. cała nowa kantówka 2700 mm rozpoczęta dla jednego elementu 420 mm |
+| B&B (`OPTIMAL`, 3257 węzłów) | 10 200 mm | 4 | 160 mm | 2100 = 1150 + 520 + 420; 2 × (2700 = 1150 + 760 + 760); 2700 = 1150 + 520 + 520 + 420 |
+
+Oszczędność: 3950 mm materiału i 4 odcinki. Test: `test_larger_demo_case_branch_and_bound_saves_bars`.
+Przy 13 elementach i 10 odcinkach przestrzeń przydziałów to 10¹³ – to przykład, którego nie da się
+rozsądnie policzyć ręcznie ani kalkulatorem.
+
+### Remis metod
+
 Gdy obie metody znajdują plan o tej samej wartości funkcji celu, UI i API mówią to wprost
 („Obie metody dały plan o tej samej wartości funkcji celu”). W danych demo jest to projekt
 „Wsporniki z profilu” (aluminium, 2 × 1000 + 1 × 150 mm, rzaz 2 mm): obie metody tną resztkę 2200 mm

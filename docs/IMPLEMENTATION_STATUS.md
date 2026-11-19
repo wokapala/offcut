@@ -1,6 +1,6 @@
 # Stan implementacji (plik przekazania między sesjami)
 
-Ostatnia aktualizacja: **wtorek 17.11.2026** (sesja 1, Europe/Warsaw).
+Ostatnia aktualizacja: **czwartek 19.11.2026** (sesja 2, Europe/Warsaw).
 Następna sesja: przeczytaj ten plik, `git log`, uruchom testy i stos Compose.
 
 ## Podsumowanie
@@ -9,6 +9,16 @@ Cały planowany zakres został zaimplementowany i zweryfikowany w sesji 1 (dzie�
 Pierwotny harmonogram (wt–pt) przewidywał rozłożenie prac na 4 dni; prace poszły szybciej, więc
 historia Git pokazuje rzeczywisty stan – wszystkie commity z 17.11.2026. Kolejne dni: przegląd,
 ewentualne poprawki po własnym przejściu demo, przygotowanie PDF do oddania.
+
+## Sesja 2 (czwartek 19.11) – co doszło
+
+* Większy projekt demo „Stojak na drewno kominkowe” (13 elementów, świerk 45×45): FFD 14 150 mm /
+  8 odcinków, B&B 10 200 mm / 4 odcinki (`OPTIMAL`). Liczby sprawdzone testami.
+* Seed: odcinki tworzone per specyfikacja, gdy nie ma żadnych – ponowny seed dokłada nowe przykłady
+  bez duplikatów. Test `tests/test_seed.py` (idempotencja + wyniki wszystkich projektów demo).
+* Instrukcja cięcia krok po kroku na stronie planu (pozycje linii cięcia, pozostałość) + widok do druku.
+* Edycja pozycji zapotrzebowania w tabeli (długość, sztuki, etykieta).
+* Schemat: brak uciętych napisów na wąskich segmentach.
 
 ## Co działa (sprawdzone)
 
@@ -20,17 +30,17 @@ ewentualne poprawki po własnym przejściu demo, przygotowanie PDF do oddania.
 * Frontend React + TS: logowanie, magazyn, projekty, zapotrzebowanie, wynik z porównaniem metod,
   schemat rozkroju, plan z rezerwacją / zwolnieniem / wykonaniem, obsługa błędów 409.
 * Docker Compose: `db` (healthcheck, wolumen) → `backend` (migracje) → `frontend` (nginx + proxy `/api`).
-* Seed demo – idempotentny (2 uruchomienia → 3 konta, 12 odcinków, 3 projekty).
+* Seed demo – idempotentny (2 uruchomienia → 3 konta, 22 odcinki, 4 projekty).
 
 ## Co sprawdzono i jak
 
 | Sprawdzenie | Wynik |
 |---|---|
-| `cd backend && uv run pytest` (PostgreSQL 16, port 5433) | **72 passed** |
+| `cd backend && uv run pytest` (PostgreSQL 16, port 5433) | **75 passed** |
 | `cd frontend && npm run build` | OK (tsc + vite, 0 błędów) |
 | `docker compose up` od pustej bazy (obrazy zbudowane z Dockerfile z repo + certyfikat proxy sandboxa) | db/backend healthy, frontend działa, `/api/health` ok, deep link SPA 200, Swagger 200 |
 | start bez danych demo | aplikacja działa, logowanie kontem demo odrzucone (dane demo niewymagane) |
-| `npx playwright test` na stosie Compose | **1 passed** – logowanie → zapotrzebowanie → optymalizacja → rezerwacja → wykonanie → resztki |
+| `npx playwright test` na stosie Compose | **1 passed** – logowanie → zapotrzebowanie (z edycją pozycji) → optymalizacja → rezerwacja → instrukcja cięcia → wykonanie → resztki |
 | scenariusz `docs/DEMO.md` w przeglądarce (skrypt Playwright) | zgodny: 5450 vs 4900 mm, konflikt 409 w drugiej karcie, operator wykonuje plan, resztki 344 i 358 mm |
 | render diagramu ERD (Mermaid) | OK – `docs/erd.png` |
 
@@ -44,15 +54,15 @@ ewentualne poprawki po własnym przejściu demo, przygotowanie PDF do oddania.
 * B&B dowodzi optymalności dla małych projektów (~10–15 elementów), większe → `BEST_FOUND`.
 * Sesja JWT bezstanowa – wylogowanie usuwa cookie, ale token ważny do wygaśnięcia (12 h);
   brak limitu prób logowania.
-* UI nie ma edycji pozycji zapotrzebowania (dodaj/usuń), planu ręcznego ani zarządzania członkami
-  (dostępne przez API).
+* UI nie ma planu ręcznego ani zarządzania członkami (dostępne przez API); specyfikacji pozycji
+  zapotrzebowania nie zmienia się w miejscu (usuń i dodaj).
 
 ## Kolejne zadania (kolejność)
 
-1. Samodzielne przejście `docs/DEMO.md` na własnym komputerze (`docker compose up --build`).
-2. Ewentualne poprawki UX po własnym przejściu demo.
+1. Autor: `docker compose up --build` na własnym Macu – jedyna niesprawdzona rzecz (patrz wyżej).
+2. Autor: przejście `docs/DEMO.md` i zgłoszenie uwag; poprawki UX.
 3. PDF do oddania (opis + screenshoty z `docs/screenshots/`) – jeśli wymagany.
-4. Nagranie / próba demonstracji 3–5 min.
+4. Próba demonstracji 3–5 min i pytań z `DEFENSE_NOTES.md`.
 
 ## Istotne decyzje
 

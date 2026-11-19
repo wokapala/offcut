@@ -13,10 +13,12 @@ Projekt indywidualny z przedmiotu ZTPAI (Politechnika Krakowska, zima 2026/27).
 * logowanie (cookie HttpOnly + CSRF), role **właściciel** i **operator** warsztatu, izolacja warsztatów,
 * ewidencja odcinków i resztek – każdy fizyczny odcinek ma własne ID i historię (pochodzenie resztki),
 * specyfikacje materiałów (materiał + przekrój) i zgodność materiałowa przy planowaniu,
-* projekty cięcia: zapotrzebowanie (specyfikacja, długość, liczba sztuk), rzaz, próg użytecznej resztki,
+* projekty cięcia: zapotrzebowanie (specyfikacja, długość, liczba sztuk; dodawanie, edycja, usuwanie),
+  rzaz, próg użytecznej resztki,
 * **optymalizacja rozkroju 1D**: FFD vs branch and bound na tych samych danych, statusy wyniku,
   limity obliczeń, raport braku materiału,
 * graficzny schemat cięcia (elementy, rzaz, resztka/odpad) i porównanie metod,
+* instrukcja cięcia krok po kroku do druku (pozycje linii cięcia, co zrobić z pozostałością),
 * rezerwacja materiału z ochroną przed podwójną rezerwacją (blokady w PostgreSQL),
 * zatwierdzanie wykonania – idempotentne, atomowe zużycie odcinków i zapis resztek do magazynu,
 * unieważnianie planów po zmianie zapotrzebowania lub parametrów,
@@ -122,8 +124,16 @@ Hasło dla wszystkich: `Demo1234!`
 | `operator@offcut.demo` | operator | Warsztat Demo |
 | `obcy@offcut.demo` | właściciel | Stolarnia Obca (do pokazania izolacji) |
 
-Dane demo zawierają projekt „Regał na narzędzia”, w którym branch and bound zużywa 4900 mm materiału
-zamiast 5450 mm z heurystyki, projekt z remisem metod i projekt z brakiem materiału.
+Dane demo zawierają:
+
+| Projekt | Heurystyka FFD | Branch and bound |
+|---|---|---|
+| „Regał na narzędzia” (6 elementów, sosna) | 5450 mm, 4 odcinki | **4900 mm, 2 odcinki** |
+| „Stojak na drewno kominkowe” (13 elementów, świerk) | 14 150 mm, 8 odcinków | **10 200 mm, 4 odcinki** |
+| „Wsporniki z profilu” (aluminium) | 2200 mm, 1 odcinek | 2200 mm, 1 odcinek (remis) |
+| „Listwy przypodłogowe (za mało materiału)” | brak planu | brak planu – raport braku materiału |
+
+Wyniki są sprawdzane testem `backend/tests/test_seed.py`.
 Scenariusz prezentacji: [`docs/DEMO.md`](docs/DEMO.md).
 
 ## Testy
