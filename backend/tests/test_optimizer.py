@@ -180,3 +180,18 @@ def test_branch_and_bound_matches_exhaustive_search(seed):
         if greedy.complete:
             assert_valid(greedy, group, kerf)
             assert cost(greedy.bars) >= expected
+
+
+def test_larger_demo_case_branch_and_bound_saves_bars():
+    """Projekt demo „Stojak na drewno kominkowe” (13 elementów)."""
+    group = Group(
+        spec_id=1,
+        stocks=tuple([Stock(i + 1, l) for i, l in enumerate([2100, 1300, 1100, 850, 700])]
+                     + [Stock(20 + i, 2700) for i in range(5)]),
+        pieces=pieces((1, 1150, 4), (2, 760, 4), (3, 520, 3), (4, 420, 2)),
+    )
+    greedy, bnb = optimize([group], kerf=3)
+    g, b = assert_valid(greedy, group, 3), assert_valid(bnb, group, 3)
+    assert cost(greedy.bars) == (14150, 8) and g.waste == 734
+    assert bnb.status == OPTIMAL
+    assert cost(bnb.bars) == (10200, 4) and b.waste == 160

@@ -65,10 +65,14 @@ def _spec(db: Session, ws: Workshop, material: str, section: str) -> MaterialSpe
     return spec
 
 
-def _stock(db: Session, ws: Workshop, spec: MaterialSpec, lengths: list[int], remnant: bool, label: str):
-    for length in lengths:
-        db.add(StockItem(workshop_id=ws.id, material_spec_id=spec.id, length_mm=length,
-                         status="AVAILABLE", is_remnant=remnant, label=label))
+def _stock(db: Session, ws: Workshop, spec: MaterialSpec, batches: list[tuple[list[int], bool, str]]):
+    """Odcinki tworzymy tylko dla specyfikacji, która nie ma jeszcze żadnego odcinka (idempotencja)."""
+    if db.scalar(select(StockItem.id).where(StockItem.material_spec_id == spec.id).limit(1)):
+        return
+    for lengths, remnant, label in batches:
+        for length in lengths:
+            db.add(StockItem(workshop_id=ws.id, material_spec_id=spec.id, length_mm=length,
+                             status="AVAILABLE", is_remnant=remnant, label=label))
 
 
 def _project(db: Session, ws: Workshop, owner: User, name: str, kerf: int, min_remnant: int,
@@ -86,15 +90,17 @@ def _project(db: Session, ws: Workshop, owner: User, name: str, kerf: int, min_r
 
 def seed(db: Session) -> None:
     owner, operator, other = (_user(db, e, n) for e, n in DEMO_USERS)
-    ws, ws_created = _workshop(db, "Warsztat Demo", [(owner, OWNER), (operator, OPERATOR)])
+    ws, _ = _workshop(db, "Warsztat Demo", [(owner, OWNER), (operator, OPERATOR)])
     pine = _spec(db, ws, "Sosna", "40x20 mm")
     alu = _spec(db, ws, "Aluminium", "profil 20x20x1,5 mm")
-    if ws_created:
-        # Przykład z docs/ALGORITHM.md – heurystyka zużywa 5450 mm, branch and bound 4900 mm.
-        _stock(db, ws, pine, [1250, 1900, 1400, 900], remnant=True, label="Resztka z wcześniejszych prac")
-        _stock(db, ws, pine, [3000, 3000, 3000], remnant=False, label="Nowa listwa 3 m")
-        _stock(db, ws, alu, [6000, 6000], remnant=False, label="Nowy profil 6 m")
-        _stock(db, ws, alu, [2200], remnant=True, label="Resztka profilu")
+    spruce = _spec(db, ws, "Świerk", "45x45 mm")
+    # Przykład z docs/ALGORITHM.md – heurystyka zużywa 5450 mm, branch and bound 4900 mm.
+    _stock(db, ws, pine, [([1250, 1900, 1400, 900], True, "Resztka z wcześniejszych prac"),
+                          ([3000, 3000, 3000], False, "Nowa listwa 3 m")])
+    _stock(db, ws, alu, [([6000, 6000], False, "Nowy profil 6 m"), ([2200], True, "Resztka profilu")])
+    # Większy przykład (13 elementów) – heurystyka 14 150 mm / 8 odcinków, B&B 10 200 mm / 4 odcinki.
+    _stock(db, ws, spruce, [([2100, 1300, 1100, 850, 700], True, "Resztka kantówki"),
+                            ([2700] * 5, False, "Nowa kantówka 2,7 m")])
     _project(db, ws, owner, "Regał na narzędzia", 3, 300, [
         (pine, 950, 2, "Słupek"),
         (pine, 600, 1, "Poprzeczka górna"),
@@ -105,14 +111,19 @@ def seed(db: Session) -> None:
         (alu, 1000, 2, "Ramię wspornika"),
         (alu, 150, 1, "Łącznik"),
     ])
+    _project(db, ws, owner, "Stojak na drewno kominkowe", 3, 300, [
+        (spruce, 1150, 4, "Słupek"),
+        (spruce, 760, 4, "Rygiel"),
+        (spruce, 520, 3, "Poprzeczka"),
+        (spruce, 420, 2, "Zastrzał"),
+    ])
     _project(db, ws, owner, "Listwy przypodłogowe (za mało materiału)", 3, 300, [
         (pine, 2900, 5, "Listwa ścienna"),
     ])
 
-    other_ws, other_created = _workshop(db, "Stolarnia Obca", [(other, OWNER)])
+    other_ws, _ = _workshop(db, "Stolarnia Obca", [(other, OWNER)])
     other_spec = _spec(db, other_ws, "Dąb", "60x20 mm")
-    if other_created:
-        _stock(db, other_ws, other_spec, [2500, 2500], remnant=False, label="Deska dębowa")
+    _stock(db, other_ws, other_spec, [([2500, 2500], False, "Deska dębowa")])
     db.commit()
 
 
