@@ -45,13 +45,21 @@ test('pełny przepływ planowania cięcia', async ({ page, request }) => {
   await page.getByRole('button', { name: 'Utwórz projekt' }).click()
   await expect(page.getByRole('heading', { name: 'Regał E2E' })).toBeVisible()
 
-  for (const [length, qty] of [[950, 2], [600, 1], [560, 3]]) {
+  for (const [length, qty] of [[950, 2], [600, 1], [560, 2]]) {
     await page.getByTestId('demand-spec').selectOption({ label: specLabel })
     await page.getByTestId('demand-length').fill(String(length))
     await page.getByTestId('demand-quantity').fill(String(qty))
     await page.getByTestId('demand-add').click()
     await expect(page.locator('[data-testid^="demand-row-"]', { hasText: `${length}` })).toBeVisible()
   }
+
+  // Edycja pozycji: 560 mm – zmiana liczby sztuk z 2 na 3
+  const row560 = page.locator('[data-testid^="demand-row-"]', { hasText: '560' })
+  const rowId = (await row560.getAttribute('data-testid'))!.replace('demand-row-', '')
+  await page.getByTestId(`demand-edit-${rowId}`).click()
+  await page.getByTestId('edit-quantity').fill('3')
+  await page.getByTestId('edit-save').click()
+  await expect(page.getByTestId(`demand-row-${rowId}`)).toContainText('3')
 
   // Optymalizacja i porównanie metod
   await page.getByTestId('optimize').click()
@@ -66,6 +74,11 @@ test('pełny przepływ planowania cięcia', async ({ page, request }) => {
   // Rezerwacja planu branch and bound
   await page.getByTestId('reserve-BRANCH_AND_BOUND').click()
   await expect(page.getByTestId('plan-status')).toHaveText('Zarezerwowany')
+
+  // Instrukcja cięcia do warsztatu (z pozycjami znaczników)
+  const instructions = page.getByTestId('cut-instructions')
+  await expect(instructions).toContainText('Tnij na 950 mm')
+  await expect(instructions).toContainText('Pozostałość 358 mm → odłóż do magazynu jako resztkę')
 
   // Wykonanie i resztki
   await page.getByTestId('execute-plan').click()
