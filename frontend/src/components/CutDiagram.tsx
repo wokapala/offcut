@@ -94,7 +94,8 @@ export default function CutDiagram({ plan }: { plan: Plan }) {
                 style={{ flexGrow: s.mm, background: s.color }}
                 title={s.title}
               >
-                {s.text && <span>{s.text}</span>}
+                {/* Napis tylko w segmentach dość szerokich (≥ 7% odcinka); wąskie mają podpowiedź i podsumowanie. */}
+                {s.text && s.mm / bar.stock_length_mm >= 0.07 && <span>{s.text}</span>}
               </div>
             ))}
           </div>

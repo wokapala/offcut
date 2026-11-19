@@ -906,3 +906,76 @@ i.seg-remnant {
     width: 100%;
   }
 }
+
+/* --- Instrukcja cięcia ---------------------------------------------------- */
+
+.instruction-bar {
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.instruction-bar h3 {
+  font-size: 1rem;
+  margin: 0 0 0.4rem;
+}
+
+.instruction-bar ol {
+  margin: 0 0 0.4rem;
+  padding-left: 1.4rem;
+}
+
+.instruction-bar li {
+  margin: 0.2rem 0;
+}
+
+.instruction-bar .checkbox {
+  display: inline-block;
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 1.5px solid var(--muted);
+  border-radius: 2px;
+  vertical-align: -0.1rem;
+  margin-right: 0.3rem;
+}
+
+.remnant-note {
+  color: var(--success);
+  font-weight: 600;
+}
+
+/* --- Wydruk: tylko treść planu (bez nawigacji, przycisków i komunikatów) ---- */
+
+@media print {
+  .topbar,
+  .no-print,
+  .alert,
+  .btn {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .card {
+    box-shadow: none;
+    border-color: #999;
+    break-inside: avoid;
+  }
+
+  .instruction-bar {
+    break-inside: avoid;
+  }
+
+  .seg,
+  .legend i {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+.editing-row input {
+  width: 100%;
+  min-width: 4.5rem;
+}

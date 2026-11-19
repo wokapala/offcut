@@ -233,6 +233,8 @@ export const api = {
     projectId: number,
     body: { material_spec_id: number; length_mm: number; quantity: number; label: string | null },
   ) => post<Project>(`/projects/${projectId}/demand`, body),
+  updateDemand: (id: number, body: { length_mm: number; quantity: number; label: string | null }) =>
+    request<Project>('PATCH', `/demand/${id}`, body),
   deleteDemand: (id: number) => request<Project>('DELETE', `/demand/${id}`),
   optimize: (projectId: number) => post<OptimizeResult>(`/projects/${projectId}/optimize`),
   projectPlans: (projectId: number) => get<Plan[]>(`/projects/${projectId}/plans`),

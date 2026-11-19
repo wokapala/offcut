@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api, type Plan, type StockItem } from '../api'
 import { useAuth } from '../auth'
 import CutDiagram from '../components/CutDiagram'
+import CutInstructions from '../components/CutInstructions'
 import PlanMetrics from '../components/PlanMetrics'
 import { Alert, Badge, Card, ErrorAlert, Spinner } from '../components/ui'
 import { useAction, useLoad } from '../hooks'
@@ -71,7 +72,10 @@ export default function PlanPage() {
             </span>
           </div>
         </div>
-        <div className="head-actions">
+        <div className="head-actions no-print">
+          <button type="button" className="btn" onClick={() => window.print()} data-testid="print-plan">
+            Drukuj instrukcję
+          </button>
           {isOwner && p.status === 'DRAFT' && (
             <button type="button" className="btn btn-primary" onClick={reserve} disabled={action.pending} data-testid="reserve-plan">
               Zarezerwuj materiał
@@ -131,6 +135,9 @@ export default function PlanPage() {
       </Card>
       <Card title="Schemat rozkroju">
         <CutDiagram plan={p} />
+      </Card>
+      <Card title="Instrukcja cięcia" className="print-break">
+        <CutInstructions plan={p} />
       </Card>
     </>
   )

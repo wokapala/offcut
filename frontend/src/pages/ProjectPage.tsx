@@ -168,6 +168,24 @@ function DemandCard(props: { project: Project; materials: MaterialSpec[]; editab
     action.run(async () => onChanged(await api.deleteDemand(demandId)))
   }
 
+  // Edycja w wierszu: długość, liczba sztuk i etykieta (zmiana specyfikacji = usuń i dodaj pozycję).
+  const [edit, setEdit] = useState<{ id: number; length: string; quantity: string; label: string } | null>(null)
+
+  function saveEdit(e: FormEvent) {
+    e.preventDefault()
+    if (!edit) return
+    action.run(async () => {
+      onChanged(
+        await api.updateDemand(edit.id, {
+          length_mm: Number(edit.length),
+          quantity: Number(edit.quantity),
+          label: edit.label.trim() || null,
+        }),
+      )
+      setEdit(null)
+    })
+  }
+
   const total = items.reduce((acc, d) => acc + d.length_mm * d.quantity, 0)
 
   return (
@@ -187,21 +205,53 @@ function DemandCard(props: { project: Project; materials: MaterialSpec[]; editab
               </tr>
             </thead>
             <tbody>
-              {items.map((d) => (
-                <tr key={d.id} data-testid={`demand-row-${d.id}`}>
-                  <td>{d.spec_label}</td>
-                  <td className="num">{mm(d.length_mm)}</td>
-                  <td className="num">{d.quantity}</td>
-                  <td>{d.label ?? <span className="muted">—</span>}</td>
-                  {editable && (
+              {items.map((d) =>
+                edit?.id === d.id ? (
+                  <tr key={d.id} data-testid={`demand-row-${d.id}`} className="editing-row">
+                    <td>{d.spec_label}</td>
+                    <td className="num">
+                      <input form="demand-edit" type="number" min={1} max={100000} required value={edit.length}
+                        onChange={(e) => setEdit({ ...edit, length: e.target.value })} data-testid="edit-length" aria-label="Długość (mm)" />
+                    </td>
+                    <td className="num">
+                      <input form="demand-edit" type="number" min={1} max={500} required value={edit.quantity}
+                        onChange={(e) => setEdit({ ...edit, quantity: e.target.value })} data-testid="edit-quantity" aria-label="Sztuk" />
+                    </td>
+                    <td>
+                      <input form="demand-edit" maxLength={120} value={edit.label}
+                        onChange={(e) => setEdit({ ...edit, label: e.target.value })} aria-label="Etykieta" />
+                    </td>
                     <td className="actions">
-                      <button type="button" className="btn btn-sm btn-ghost" disabled={action.pending} onClick={() => remove(d.id)}>
-                        Usuń
+                      <form id="demand-edit" onSubmit={saveEdit} />
+                      <button type="submit" form="demand-edit" className="btn btn-sm btn-primary" disabled={action.pending} data-testid="edit-save">
+                        Zapisz
+                      </button>
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setEdit(null)}>
+                        Anuluj
                       </button>
                     </td>
-                  )}
-                </tr>
-              ))}
+                  </tr>
+                ) : (
+                  <tr key={d.id} data-testid={`demand-row-${d.id}`}>
+                    <td>{d.spec_label}</td>
+                    <td className="num">{mm(d.length_mm)}</td>
+                    <td className="num">{d.quantity}</td>
+                    <td>{d.label ?? <span className="muted">—</span>}</td>
+                    {editable && (
+                      <td className="actions">
+                        <button type="button" className="btn btn-sm btn-ghost" disabled={action.pending}
+                          onClick={() => setEdit({ id: d.id, length: String(d.length_mm), quantity: String(d.quantity), label: d.label ?? '' })}
+                          data-testid={`demand-edit-${d.id}`}>
+                          Edytuj
+                        </button>
+                        <button type="button" className="btn btn-sm btn-ghost" disabled={action.pending} onClick={() => remove(d.id)}>
+                          Usuń
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ),
+              )}
             </tbody>
             <tfoot>
               <tr>
