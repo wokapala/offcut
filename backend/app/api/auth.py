@@ -45,10 +45,10 @@ def register(body: schemas.RegisterIn, response: Response, db: Session = Depends
         raise Conflict("Konto z tym adresem e-mail już istnieje.", code="EMAIL_TAKEN")
     user = User(email=body.email, full_name=body.full_name, password_hash=hash_password(body.password))
     workshop = Workshop(name=body.workshop_name)
-    db.add_all([user, workshop])
-    db.flush()
-    db.add(Membership(user_id=user.id, workshop_id=workshop.id, role=OWNER))
     try:
+        db.add_all([user, workshop])
+        db.flush()
+        db.add(Membership(user_id=user.id, workshop_id=workshop.id, role=OWNER))
         db.commit()
     except IntegrityError as exc:
         db.rollback()

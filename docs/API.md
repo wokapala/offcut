@@ -27,7 +27,7 @@ Wszystkie ścieżki zaczynają się od `/api`. Długości są liczbami całkowit
 | 401 | `NOT_AUTHENTICATED`, `BAD_CREDENTIALS` | brak/wygasła sesja, złe hasło |
 | 403 | `OWNER_REQUIRED`, `CSRF_FAILED` | operacja tylko dla właściciela, brak tokenu CSRF |
 | 404 | `NOT_FOUND` | brak zasobu **lub zasób z cudzego warsztatu** (nie ujawniamy istnienia) |
-| 409 | `STOCK_UNAVAILABLE`, `STALE_PLAN`, `PROJECT_LOCKED`, `PLAN_NOT_RESERVED`, `PLAN_NOT_DRAFT`, `SPEC_EXISTS`, `SPEC_IN_USE`, `EMAIL_TAKEN`, `ALREADY_MEMBER`, `STOCK_NOT_AVAILABLE`, `RESERVATION_INCONSISTENT` | konflikt stanu |
+| 409 | `STOCK_UNAVAILABLE`, `STALE_PLAN`, `PROJECT_LOCKED`, `PLAN_NOT_RESERVED`, `PLAN_NOT_DRAFT`, `SPEC_EXISTS`, `SPEC_IN_USE`, `EMAIL_TAKEN`, `STOCK_NOT_AVAILABLE`, `RESERVATION_INCONSISTENT` | konflikt stanu |
 | 422 | `VALIDATION_ERROR`, `INVALID_PLAN`, `EMPTY_DEMAND`, `PROBLEM_TOO_LARGE` | błędne dane, plan niezgodny z bilansem |
 
 ## Uprawnienia

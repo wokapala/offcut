@@ -66,7 +66,7 @@ class LoginOut(BaseModel):
 class MemberIn(BaseModel):
     email: Email
     full_name: Name
-    password: Password = Field(description="Hasło nowego konta (ignorowane, gdy konto już istnieje)")
+    password: Password = Field(description="Hasło nowego konta (tworzone jest zawsze nowe konto)")
     role: Role = "OPERATOR"
 
 

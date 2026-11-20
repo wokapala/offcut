@@ -121,3 +121,27 @@ def test_operator_can_execute_but_not_reserve(api, demo):
     out = api.ok("POST", f"/api/plans/{plan['id']}/execute")
     assert out["plan"]["status"] == "EXECUTED"
     assert out["plan"]["execution"]["executed_by"] == "Operator"
+
+
+def test_owner_cannot_attach_existing_account(api, client):
+    api.register("victim@test.pl", "Warsztat ofiary", name="Ofiara")
+    client.cookies.clear()
+    ws = api.register("owner@test.pl", "Warsztat A")
+    r = client.post(f"/api/workshops/{ws}/members", json={
+        "email": "victim@test.pl", "full_name": "x", "password": "Haslo1234!", "role": "OWNER"})
+    assert r.status_code == 409 and r.json()["code"] == "EMAIL_TAKEN"
+    assert "Ofiara" not in r.text
+    api.login("victim@test.pl")
+    assert [m["workshop_name"] for m in api.ok("GET", "/api/auth/me")["memberships"]] == ["Warsztat ofiary"]
+
+
+def test_out_of_range_ids_are_client_errors_not_500(api, demo):
+    huge = 2**31
+    assert api.c.get(f"/api/plans/{huge}").status_code == 422
+    assert api.c.get(f"/api/workshops/{demo['ws']}/stock?material_spec_id={huge}").status_code == 422
+    r = api.c.post(f"/api/projects/{demo['project']}/demand",
+                   json={"material_spec_id": huge, "length_mm": 100, "quantity": 1})
+    assert r.status_code == 422
+    r = api.c.post(f"/api/projects/{demo['project']}/plans/manual",
+                   json={"bars": [{"stock_item_id": huge, "demand_item_ids": [1]}]})
+    assert r.status_code == 422

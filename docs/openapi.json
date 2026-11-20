@@ -1955,7 +1955,7 @@
             "maxLength": 128,
             "minLength": 8,
             "title": "Password",
-            "description": "Hasło nowego konta (ignorowane, gdy konto już istnieje)"
+            "description": "Hasło nowego konta (tworzone jest zawsze nowe konto)"
           },
           "role": {
             "type": "string",

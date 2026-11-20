@@ -6,6 +6,7 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import DataError
 
 
 class AppError(Exception):
@@ -51,6 +52,15 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail, "code": exc.code, "problems": exc.problems},
+        )
+
+    @app.exception_handler(DataError)
+    async def _data_error(_: Request, exc: DataError):
+        # np. identyfikator większy niż zakres INTEGER w PostgreSQL – błąd danych, nie serwera
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "Nieprawidłowe dane wejściowe (wartość poza zakresem)",
+                     "code": "VALIDATION_ERROR", "problems": []},
         )
 
     @app.exception_handler(RequestValidationError)

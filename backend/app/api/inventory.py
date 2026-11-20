@@ -45,17 +45,19 @@ def list_members(workshop_id: int, user: User = Depends(get_current_user), db: S
 def add_member(workshop_id: int, body: schemas.MemberIn, user: User = Depends(get_current_user),
                db: Session = Depends(get_db)):
     workshop_access(db, user, workshop_id).require_owner()
-    member = db.scalar(select(User).where(User.email == body.email))
-    if member is None:
-        member = User(email=body.email, full_name=body.full_name, password_hash=hash_password(body.password))
+    # Tworzymy wyłącznie nowe konto – nie dopisujemy cudzych, istniejących kont bez ich zgody
+    # i nie ujawniamy ich danych.
+    if db.scalar(select(User.id).where(User.email == body.email)):
+        raise Conflict("Konto z tym adresem e-mail już istnieje.", code="EMAIL_TAKEN")
+    member = User(email=body.email, full_name=body.full_name, password_hash=hash_password(body.password))
+    try:
         db.add(member)
         db.flush()
-    db.add(Membership(user_id=member.id, workshop_id=workshop_id, role=body.role))
-    try:
+        db.add(Membership(user_id=member.id, workshop_id=workshop_id, role=body.role))
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        raise Conflict("Ten użytkownik już należy do warsztatu.", code="ALREADY_MEMBER") from exc
+        raise Conflict("Konto z tym adresem e-mail już istnieje.", code="EMAIL_TAKEN") from exc
     return schemas.MemberOut(user_id=member.id, email=member.email, full_name=member.full_name, role=body.role)
 
 
