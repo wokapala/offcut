@@ -126,11 +126,15 @@ ile jest elementów tej specyfikacji – więcej i tak nie może zostać użytyc
 |---|---|---|
 | węzły przeszukiwania | 300 000 | `OFFCUT_OPTIMIZER_MAX_NODES` |
 | czas | 3 s | `OFFCUT_OPTIMIZER_TIME_LIMIT_S` |
-| elementów w projekcie | 200 | `OFFCUT_MAX_PIECES_PER_PROJECT` |
-| odcinków-kandydatów | 400 | `OFFCUT_MAX_STOCK_CANDIDATES` |
+| elementów w projekcie | 200 | `OFFCUT_MAX_PIECES_PER_PROJECT` (\*) |
+| odcinków-kandydatów | 400 | `OFFCUT_MAX_STOCK_CANDIDATES` (\*) |
+
+(\*) Ustawiane przy uruchomieniu backendu poza Docker Compose; `docker-compose.yml` przekazuje tylko
+limity węzłów i czasu.
 
 Pomiar (losowe instancje, odcinki 900–3000 mm, elementy 350–1100 mm, rzaz 3 mm, domyślne limity,
-jeden rdzeń):
+jeden rdzeń). Odtworzenie: `cd backend && uv run python -m scripts.benchmark_optimizer` – instancje są
+deterministyczne, czasy zależą od komputera:
 
 | Elementów | FFD [mm / odcinki] | B&B [mm / odcinki] | Status B&B | Czas |
 |---|---|---|---|---|
@@ -205,4 +209,5 @@ Gdy obie metody znajdują plan o tej samej wartości funkcji celu, UI i API mów
 „Wsporniki z profilu” (aluminium, 2 × 1000 + 1 × 150 mm, rzaz 2 mm): obie metody tną resztkę 2200 mm
 (2 × 1000 + 150 + 2 cięcia między elementami = 2154 mm, cięcie końcowe 2 mm, pozostałość 44 mm
 – poniżej progu, więc odpad planu = 6 mm rzazu + 44 mm = 50 mm).
-Test: `test_both_methods_equal_is_reported_honestly`.
+Testy: `test_seed.py::test_demo_projects_give_documented_results` (dokładnie ten projekt) oraz
+`test_both_methods_equal_is_reported_honestly` (inny przypadek remisu: 4 × 700 mm z listew 3000 mm).

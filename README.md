@@ -98,8 +98,9 @@ ruch do `/api` przechodzi przez nginx kontenera `frontend`.
 ### Migracje i dane demo
 
 Migracje Alembic uruchamiają się automatycznie przy każdym starcie kontenera `backend`
-(`alembic upgrade head`, od pustej bazy). Aplikacja startuje **bez** danych demo – można
-zarejestrować własny warsztat na ekranie logowania (lub `POST /api/auth/register`).
+(`alembic upgrade head`, od pustej bazy). Aplikacja startuje **bez** danych demo – własny warsztat
+można zarejestrować przez API: `POST /api/auth/register` (np. w Swagger UI pod `/api/docs`).
+Interfejs nie ma formularza rejestracji.
 
 Dane demonstracyjne ładuje się jawnie jednym poleceniem (bezpieczne do ponownego uruchomienia –
 nie duplikuje danych):
@@ -144,6 +145,8 @@ Backend – testy działają na **prawdziwym PostgreSQL** (transakcje, blokady, 
 docker compose -f docker-compose.test.yml up -d
 ```
 
+Z katalogu głównego projektu:
+
 ```bash
 cd backend && uv sync && uv run pytest
 ```
@@ -159,6 +162,8 @@ ponowienie wykonania, wycofanie transakcji przy błędzie, ograniczenia bazy.
 Przepływ w przeglądarce (Playwright): logowanie → projekt i zapotrzebowanie → optymalizacja
 (5450 vs 4900 mm) → rezerwacja → wykonanie → resztki w magazynie. Test sam tworzy nowy warsztat przez
 API, więc można go powtarzać. Wymaga działającej aplikacji (`docker compose up`):
+
+Z katalogu głównego projektu (w nowym terminalu):
 
 ```bash
 cd frontend && npm ci && npx playwright install chromium
@@ -211,7 +216,7 @@ Szczegóły, przykłady i ograniczenia: [`docs/ALGORITHM.md`](docs/ALGORITHM.md)
 | [`docs/API.md`](docs/API.md) + Swagger | kluczowe operacje, uprawnienia, błędy |
 | [`docs/DEMO.md`](docs/DEMO.md) | scenariusz demonstracji 3–5 min |
 | [`docs/DEFENSE_NOTES.md`](docs/DEFENSE_NOTES.md) | decyzje, reguły biznesowe, pytania |
-| [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) | stan prac i weryfikacji |
+| [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) | stan projektu, sposób weryfikacji, ograniczenia |
 
 ## Struktura
 

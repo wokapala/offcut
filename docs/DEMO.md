@@ -3,7 +3,7 @@
 ## Przygotowanie (przed prezentacją)
 
 ```bash
-cp .env.example .env            # ustaw POSTGRES_PASSWORD i OFFCUT_SECRET_KEY
+cp .env.example .env            # wartości domyślne wystarczą lokalnie
 docker compose down -v          # świeża baza (usuwa dane!)
 docker compose up --build -d
 docker compose exec backend python -m app.seed
@@ -16,7 +16,7 @@ Konta demo (hasło `Demo1234!`): `wlasciciel@offcut.demo`, `operator@offcut.demo
 
 | Czas | Krok | Co pokazać / powiedzieć | Oczekiwany wynik |
 |---|---|---|---|
-| 0:00 | Logowanie jako `wlasciciel@offcut.demo` | Sesja w cookie HttpOnly + token CSRF; role właściciel / operator | nagłówek: „Warsztat Demo · Właściciel” |
+| 0:00 | Logowanie jako `wlasciciel@offcut.demo` | Sesja w cookie HttpOnly + token CSRF; role właściciel / operator | nagłówek: „Warsztat Demo”, „Anna Właścicielka”, plakietka „Właściciel” |
 | 0:20 | **Magazyn** | Każdy odcinek ma własne ID; np. sosna 40×20: resztki 1250/1900/1400/900 mm i 3 nowe listwy 3000 mm | 20 dostępnych odcinków, 48 200 mm (sosna, aluminium, świerk) |
 | 0:45 | **Projekty → „Regał na narzędzia”** | Zapotrzebowanie: 2×950, 1×600, 3×560 mm; rzaz 3 mm, próg resztki 300 mm | 6 elementów, 4180 mm |
 | 1:05 | **Optymalizuj rozkrój** | Obie metody liczą na tych samych danych | FFD: 5450 mm, 4 odcinki, odpad 823 mm; B&B: **4900 mm, 2 odcinki, odpad 18 mm, status „Optymalny”** |
