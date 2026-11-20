@@ -76,7 +76,7 @@ export default function PlanPage() {
           <button type="button" className="btn" onClick={() => window.print()} data-testid="print-plan">
             Drukuj instrukcję
           </button>
-          {isOwner && p.status === 'DRAFT' && (
+          {isOwner && p.status === 'DRAFT' && p.is_current && project.data?.state === 'OPEN' && (
             <button type="button" className="btn btn-primary" onClick={reserve} disabled={action.pending} data-testid="reserve-plan">
               Zarezerwuj materiał
             </button>

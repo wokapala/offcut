@@ -14,7 +14,8 @@ function barSteps(bar: PlanBar, kerfMm: number): string[] {
     position += piece.length_mm // pozycja linii cięcia od początku odcinka
     const name = `element ${mm(piece.length_mm)}${piece.label ? ` (${piece.label})` : ''}`
     const isLast = i === bar.pieces.length - 1
-    if (isLast && finalKerf === 0) {
+    // Bez cięcia tylko wtedy, gdy po ostatnim elemencie nic nie zostaje (przy rzazie 0 resztkę też trzeba odciąć).
+    if (isLast && finalKerf + bar.remainder_mm === 0) {
       steps.push(`Ostatni ${name} kończy się na końcu odcinka – bez cięcia`)
     } else {
       steps.push(`Tnij na ${mm(position)} → ${name}`)
