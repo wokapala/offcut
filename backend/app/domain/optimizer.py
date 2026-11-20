@@ -320,10 +320,13 @@ def optimize(groups: list[Group], kerf: int, limits: Limits | None = None) -> tu
     if kerf < 0:
         raise ValueError("Rzaz nie może być ujemny")
     limits = limits or Limits()
+    start = time.perf_counter()
     greedy_parts, bnb_parts = [], []
     for g in groups:
         gr = greedy_group(g, kerf)
-        bb = branch_and_bound_group(g, kerf, limits, incumbent=gr)
+        # Limit czasu jest wspólny dla całego uruchomienia (wszystkich specyfikacji materiału).
+        remaining = max(0.0, limits.time_limit_s - (time.perf_counter() - start))
+        bb = branch_and_bound_group(g, kerf, Limits(limits.max_nodes, remaining), incumbent=gr)
         gr.spec_id = bb.spec_id = g.spec_id
         greedy_parts.append(gr)
         bnb_parts.append(bb)

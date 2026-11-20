@@ -195,3 +195,21 @@ def test_larger_demo_case_branch_and_bound_saves_bars():
     assert cost(greedy.bars) == (14150, 8) and g.waste == 734
     assert bnb.status == OPTIMAL
     assert cost(bnb.bars) == (10200, 4) and b.waste == 160
+
+
+def test_time_limit_is_shared_by_all_material_groups():
+    import time
+
+    def heavy(spec_id, seed):
+        rnd = random.Random(seed)
+        stocks = tuple(Stock(spec_id * 1000 + i, rnd.choice([2400, 2700, 3000, 3300])) for i in range(40))
+        ps = tuple(Piece(spec_id * 1000 + length, length)
+                   for length in (rnd.randint(30, 130) * 10 for _ in range(45)))
+        return Group(spec_id, stocks, ps)
+
+    groups = [heavy(s, s) for s in range(1, 5)]
+    start = time.perf_counter()
+    _, bnb = optimize(groups, kerf=3, limits=Limits(max_nodes=10**9, time_limit_s=0.5))
+    elapsed = time.perf_counter() - start
+    assert elapsed < 1.5  # 4 grupy, ale jeden wspólny limit 0,5 s (z zapasem na sprawdzanie co 1024 węzły)
+    assert bnb.status == BEST_FOUND and bnb.complete

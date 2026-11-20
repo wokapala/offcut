@@ -125,7 +125,7 @@ ile jest elementów tej specyfikacji – więcej i tak nie może zostać użytyc
 | Limit | Domyślnie | Zmienna |
 |---|---|---|
 | węzły przeszukiwania | 300 000 | `OFFCUT_OPTIMIZER_MAX_NODES` |
-| czas | 3 s | `OFFCUT_OPTIMIZER_TIME_LIMIT_S` |
+| czas (łącznie dla wszystkich specyfikacji w projekcie) | 3 s | `OFFCUT_OPTIMIZER_TIME_LIMIT_S` |
 | elementów w projekcie | 200 | `OFFCUT_MAX_PIECES_PER_PROJECT` (\*) |
 | odcinków-kandydatów | 400 | `OFFCUT_MAX_STOCK_CANDIDATES` (\*) |
 
