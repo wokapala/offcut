@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -22,8 +24,16 @@ Wszystkie długości są liczbami całkowitymi w milimetrach.
 """
 
 
+PLACEHOLDER_SECRET = "zmien-mnie-na-dlugi-losowy-ciag"  # wartość z .env.example
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
+    if settings.secret_key == PLACEHOLDER_SECRET or len(settings.secret_key) < 32:
+        logging.getLogger("offcut").warning(
+            "OFFCUT_SECRET_KEY to wartość przykładowa lub jest krótszy niż 32 znaki – "
+            "wystarczy lokalnie, ale poza własnym komputerem ustaw własny losowy klucz."
+        )
     app = FastAPI(title="Offcut API", version="1.0.0", description=DESCRIPTION,
                   docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url=None)
     app.add_middleware(

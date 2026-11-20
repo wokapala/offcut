@@ -104,8 +104,13 @@ def optimize_out(db: Session, result: dict) -> schemas.OptimizeOut:
         bars = g.stock_count - b.stock_count
         waste = (g.kerf_loss_mm + g.scrap_mm) - (b.kerf_loss_mm + b.scrap_mm)
         if saved > 0 or (saved == 0 and bars > 0):
-            verdict = (f"Branch and bound zużywa o {saved} mm materiału mniej "
-                       f"i {bars} odcinków mniej niż heurystyka.")
+            if bars > 0:
+                bars_text = f"i {bars} odcinków mniej"
+            elif bars < 0:
+                bars_text = f"kosztem {-bars} odcinków więcej"
+            else:
+                bars_text = "przy tej samej liczbie odcinków"
+            verdict = f"Branch and bound zużywa o {saved} mm materiału mniej {bars_text} niż heurystyka."
         else:
             verdict = "Obie metody dały plan o tej samej wartości funkcji celu."
         comparison = schemas.ComparisonOut(stock_saved_mm=saved, bars_saved=bars, waste_saved_mm=waste,

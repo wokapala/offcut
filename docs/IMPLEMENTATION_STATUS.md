@@ -20,7 +20,7 @@ Stan na **20.11.2026**. Zakres ze zgłoszenia projektu jest zaimplementowany i s
 
 | Sprawdzenie | Wynik |
 |---|---|
-| `cd backend && uv run pytest` (PostgreSQL 16) | 75 passed |
+| `cd backend && uv run pytest` (PostgreSQL 16) | 79 passed |
 | `cd frontend && npm run build` | bez błędów |
 | `docker compose up` od pustej bazy | `db` i `backend` healthy, `/api/health` 200, Swagger 200 |
 | start bez danych demo | aplikacja działa; logowanie kontem demo odrzucone |
@@ -43,6 +43,10 @@ budowanie poleceniem `docker compose up --build`.
 * Rejestracja, plan ręczny i dodawanie członków warsztatu są dostępne tylko przez API.
 * Specyfikacji pozycji zapotrzebowania nie zmienia się w miejscu (usuń i dodaj pozycję).
 * Optymalizacja działa synchronicznie w żądaniu HTTP.
+* Dane demo służą tylko do lokalnej prezentacji: seed odnajduje warsztat po nazwie „Warsztat Demo”
+  i używa jawnych haseł demo.
+* Klucz sesji z `.env.example` wystarcza lokalnie (backend ostrzega o tym przy starcie); poza własnym
+  komputerem trzeba ustawić własny losowy `OFFCUT_SECRET_KEY`.
 
 ## Najważniejsze decyzje
 
