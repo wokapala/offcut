@@ -77,7 +77,7 @@ def load_scoped(db: Session, user: User, model, obj_id: int, workshop_of, what: 
     """Ładuje obiekt i sprawdza członkostwo w jego warsztacie (inaczej 404)."""
     stmt = select(model).where(model.id == obj_id)
     if for_update:
-        stmt = stmt.with_for_update()
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
     obj = db.scalar(stmt)
     if obj is None:
         raise NotFound(f"Nie znaleziono: {what}")

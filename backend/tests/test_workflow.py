@@ -282,3 +282,45 @@ def test_concurrent_execute_consumes_once(api, demo, db):
     assert db.scalar(select(func.count()).select_from(PlanExecution)) == 1
     assert db.scalar(select(func.count()).select_from(StockItem).where(StockItem.is_remnant,
                                                                        StockItem.parent_stock_id.isnot(None))) == 2
+
+
+
+def test_requests_waiting_for_project_lock_see_the_committed_revision(api, demo, db):
+    """Wyścig: inna transakcja trzyma blokadę projektu i zmienia zapotrzebowanie (rewizja +1).
+
+    Rezerwacja starego planu i dodanie pozycji czekają na blokadę. Po jej zwolnieniu muszą widzieć
+    nową rewizję: rezerwacja -> 409 STALE_PLAN, a podbicie rewizji nie może zginąć.
+    """
+    import time
+
+    from app.db import SessionLocal
+    from app.models import Project
+
+    pid = demo["project"]
+    plan = api.ok("POST", f"/api/projects/{pid}/optimize")["branch_and_bound"]["plan"]
+    start = plan["project_revision"]
+    results = {}
+
+    def run(name, method, url, body=None):
+        results[name] = api.c.request(method, url, json=body)
+
+    with SessionLocal() as other:
+        other.scalar(select(Project).where(Project.id == pid).with_for_update()).revision += 1
+        other.flush()
+        threads = [
+            threading.Thread(target=run, args=("reserve", "POST", f"/api/plans/{plan['id']}/reserve")),
+            threading.Thread(target=run, args=("demand", "POST", f"/api/projects/{pid}/demand",
+                                                 {"material_spec_id": demo["spec"], "length_mm": 300, "quantity": 1})),
+        ]
+        for t in threads:
+            t.start()
+        time.sleep(1.0)  # oba żądania czekają teraz na blokadę wiersza projektu
+        other.commit()
+    for t in threads:
+        t.join(timeout=30)
+
+    assert results["reserve"].status_code == 409, results["reserve"].text
+    assert results["reserve"].json()["code"] == "STALE_PLAN"
+    assert results["demand"].status_code == 201
+    db.expire_all()
+    assert db.get(Project, pid).revision == start + 2  # obie zmiany policzone

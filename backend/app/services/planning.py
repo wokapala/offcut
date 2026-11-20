@@ -63,7 +63,10 @@ def project_state(db: Session, project: Project) -> tuple[str, int | None]:
 
 def lock_project_for_change(db: Session, project_id: int) -> Project:
     """Blokuje wiersz projektu i sprawdza, że można zmieniać zapotrzebowanie/parametry."""
-    project = db.scalar(select(Project).where(Project.id == project_id).with_for_update())
+    # populate_existing: projekt mógł być wczytany wcześniej w tej sesji bez blokady – po uzyskaniu
+    # blokady musimy widzieć wersję zatwierdzoną przez transakcję, na którą czekaliśmy.
+    project = db.scalar(select(Project).where(Project.id == project_id).with_for_update()
+                        .execution_options(populate_existing=True))
     plan = active_plan(db, project_id)
     if plan is not None:
         if plan.status == PLAN_RESERVED:

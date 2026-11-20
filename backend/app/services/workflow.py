@@ -40,13 +40,16 @@ STATUS_PL = {AVAILABLE: "dostępny", RESERVED: "zarezerwowany", CONSUMED: "zuży
 def _lock_plan(db: Session, user: User, plan_id: int):
     plan, access = load_scoped(db, user, CuttingPlan, plan_id,
                                lambda p: p.project.workshop_id, "plan", for_update=True)
-    project = db.scalar(select(Project).where(Project.id == plan.project_id).with_for_update())
+    # populate_existing: projekt jest już w sesji (sprawdzanie warsztatu) – odśwież go po blokadzie.
+    project = db.scalar(select(Project).where(Project.id == plan.project_id).with_for_update()
+                        .execution_options(populate_existing=True))
     return plan, project, access
 
 
 def _lock_stock(db: Session, ids: list[int]) -> list[StockItem]:
     return list(db.scalars(
         select(StockItem).where(StockItem.id.in_(ids)).order_by(StockItem.id).with_for_update()
+        .execution_options(populate_existing=True)
     ))
 
 
