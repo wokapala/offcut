@@ -84,12 +84,14 @@ test('pełny przepływ planowania cięcia', async ({ page, request }) => {
   await page.getByTestId('execute-plan').click()
   await expect(page.getByTestId('plan-status')).toHaveText('Wykonany')
   const remnants = page.getByTestId('remnants')
-  await expect(remnants).toContainText('344')
-  await expect(remnants).toContainText('358')
+  await expect(remnants).toContainText('344 mm')
+  await expect(remnants).toContainText('358 mm')
 
   // Resztki są w magazynie jako dostępne odcinki z pochodzeniem z planu
   await page.getByTestId('nav-stock').click()
   for (const length of ['344', '358']) {
-    await expect(page.locator('[data-testid^="stock-row-"]', { hasText: length }).first()).toContainText('z planu')
+    const row = page.locator('[data-testid^="stock-row-"]', { has: page.getByRole('cell', { name: length, exact: true }) })
+    await expect(row).toHaveCount(1)
+    await expect(row).toContainText('z planu')
   }
 })
