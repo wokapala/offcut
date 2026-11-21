@@ -216,7 +216,7 @@ Szczegóły, przykłady i ograniczenia: [`docs/ALGORITHM.md`](docs/ALGORITHM.md)
 | [`docs/API.md`](docs/API.md) + Swagger | kluczowe operacje, uprawnienia, błędy |
 | [`docs/DEMO.md`](docs/DEMO.md) | scenariusz demonstracji 3–5 min |
 | [`docs/DEFENSE_NOTES.md`](docs/DEFENSE_NOTES.md) | decyzje, reguły biznesowe, pytania |
-| [`docs/prezentacja.pdf`](docs/prezentacja.pdf) | prezentacja projektu (16 slajdów; wersja offline: `docs/prezentacja.html`) |
+| [`docs/prezentacja.pdf`](docs/prezentacja.pdf) | prezentacja projektu (16 slajdów); wersja pionowa: [`docs/prezentacja-pionowa.pdf`](docs/prezentacja-pionowa.pdf); offline: `docs/prezentacja.html` (dopasowuje się do szerokości okna) |
 | [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) | stan projektu, sposób weryfikacji, ograniczenia |
 
 ## Struktura

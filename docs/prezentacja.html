@@ -66,12 +66,71 @@
     html, body { background: #fff; }
     .slide { margin: 0; box-shadow: none; border-radius: 0; page-break-after: always; break-after: page; }
   }
+
+  html { scroll-behavior: smooth; }
+  .slide { scroll-margin-top: 64px; }
+  .topnav { position: sticky; top: 0; z-index: 10; display: flex; gap: 6px; overflow-x: auto; padding: 10px 14px;
+    background: rgba(238, 241, 245, .96); border-bottom: 1px solid var(--line); scrollbar-width: thin; }
+  .topnav a { flex: none; text-decoration: none; color: var(--navy); background: #fff; border: 1px solid var(--line);
+    border-radius: 999px; padding: 5px 11px; font-size: 13px; white-space: nowrap; }
+  .topnav a b { color: var(--muted); margin-right: 2px; }
+  .topnav a:hover { background: var(--navy-soft); }
+
+  /* Wąskie okno (np. 1/3 ekranu laptopa) i pionowy PDF: jedna kolumna, większy tekst */
+  @media (max-width: 900px) {
+    .slide { width: auto; height: auto; margin: 12px 10px; padding: 26px 20px 46px 26px; border-radius: 10px; }
+    .slide::before { width: 6px; }
+    .title-slide { padding-left: 26px; min-height: 0; }
+    .title-slide h1 { font-size: 44px; }
+    .title-slide .sub { font-size: 21px; margin-bottom: 22px; }
+    .meta { font-size: 15px; line-height: 1.7; word-break: break-word; }
+    h1 { font-size: 27px; margin-bottom: 16px; }
+    h2 { font-size: 18px; }
+    p, li { font-size: 16px; }
+    .lead { font-size: 17px; }
+    .kicker { font-size: 12.5px; }
+    .grid2, .grid3, .grid4 { grid-template-columns: 1fr !important; gap: 14px; }
+    .card { padding: 14px 16px; }
+    .card p, .card li { font-size: 15.5px; }
+    .flow { flex-direction: column; gap: 6px; }
+    .flow .arrow { transform: rotate(90deg); align-self: center; font-size: 20px; line-height: 1; }
+    .flow .step span { font-size: 14.5px; }
+    table { font-size: 14px; }
+    th, td { padding: 6px 6px; }
+    th { font-size: 11px; }
+    td.n, th.n { white-space: normal; }
+    .big { font-size: 36px; }
+    .stack-row { grid-template-columns: 110px 1fr; gap: 8px; }
+    .stack-row .k { font-size: 15.5px; }
+    pre { font-size: 12.5px; white-space: pre-wrap; word-break: break-word; }
+    code { word-break: break-word; }
+    img.shot { width: 100% !important; height: auto !important; max-height: none !important; object-fit: contain !important; }
+    .brand, .num { bottom: 14px; font-size: 12px; }
+    .brand { left: 26px; } .num { right: 20px; }
+  }
+  @media (max-width: 900px) {
+    th[style] { width: auto !important; }
+    /* tabela przepływu requestu: każdy krok jako blok (numer + warstwa nad opisem) */
+    #s6 table, #s6 tbody, #s6 tr, #s6 td { display: block; width: auto; }
+    #s6 tr:first-child { display: none; }
+    #s6 tr { border-bottom: 1px solid var(--line); padding: 8px 0; }
+    #s6 td { border: none; padding: 2px 0; font-size: 15px; }
+    #s6 td:first-child { display: inline-block; width: 26px; font-weight: 800; color: var(--navy); }
+    #s6 td:nth-child(2) { display: inline-block; font-weight: 700; }
+  }
+  @media print {
+    .topnav { display: none; }
+  }
+  @media print and (max-width: 900px) {
+    .slide { margin: 0; border-radius: 0; box-shadow: none; }
+  }
 </style>
 </head>
 <body>
+<nav class="topnav"><a href="#s1"><b>1</b> Start</a><a href="#s2"><b>2</b> Problem</a><a href="#s3"><b>3</b> Rozwiązanie</a><a href="#s4"><b>4</b> Efekt</a><a href="#s5"><b>5</b> Architektura</a><a href="#s6"><b>6</b> Request</a><a href="#s7"><b>7</b> Dane</a><a href="#s8"><b>8</b> Migracje</a><a href="#s9"><b>9</b> Auth</a><a href="#s10"><b>10</b> Walidacja i błędy</a><a href="#s11"><b>11</b> Reguły</a><a href="#s12"><b>12</b> Algorytm</a><a href="#s13"><b>13</b> Interfejs</a><a href="#s14"><b>14</b> Testy</a><a href="#s15"><b>15</b> Wymagania</a><a href="#s16"><b>16</b> Uruchomienie</a></nav>
 
 <!-- 1 -->
-<section class="slide title-slide">
+<section id="s1" class="slide title-slide">
   <p class="kicker">Projekt indywidualny · ZTPAI · zima 2026/27</p>
   <h1>Offcut</h1>
   <p class="sub">Optymalizacja cięcia materiałów i wykorzystania resztek</p>
@@ -84,7 +143,7 @@
 </section>
 
 <!-- 2 -->
-<section class="slide">
+<section id="s2" class="slide">
   <p class="kicker">Problem</p>
   <h1>Warsztat traci materiał przy każdym zleceniu</h1>
   <div class="grid3">
@@ -99,7 +158,7 @@
 </section>
 
 <!-- 3 -->
-<section class="slide">
+<section id="s3" class="slide">
   <p class="kicker">Rozwiązanie</p>
   <h1>Od magazynu do gotowej instrukcji cięcia</h1>
   <div class="flow">
@@ -118,7 +177,7 @@
 </section>
 
 <!-- 4 -->
-<section class="slide">
+<section id="s4" class="slide">
   <p class="kicker">Efekt</p>
   <h1>Mniej zużytego materiału na tych samych danych</h1>
   <div class="grid2" style="grid-template-columns: 1fr 1.15fr; align-items:start">
@@ -141,7 +200,7 @@
 </section>
 
 <!-- 5 -->
-<section class="slide">
+<section id="s5" class="slide">
   <p class="kicker">Architektura</p>
   <h1>Modularny monolit w trzech kontenerach</h1>
   <div class="flow" style="margin-bottom:26px">
@@ -172,7 +231,7 @@
 </section>
 
 <!-- 6 -->
-<section class="slide">
+<section id="s6" class="slide">
   <p class="kicker">Przepływ requestu</p>
   <h1>Od endpointu do bazy: rezerwacja planu</h1>
   <table>
@@ -190,7 +249,7 @@
 </section>
 
 <!-- 7 -->
-<section class="slide">
+<section id="s7" class="slide">
   <p class="kicker">Model danych</p>
   <h1>11 tabel, każdy kawałek materiału osobno</h1>
   <div class="grid2" style="grid-template-columns: 1.25fr .9fr; align-items:start">
@@ -214,7 +273,7 @@
 </section>
 
 <!-- 8 -->
-<section class="slide">
+<section id="s8" class="slide">
   <p class="kicker">Baza danych</p>
   <h1>Migracje i reguły pilnowane przez bazę</h1>
   <div class="grid2">
@@ -244,7 +303,7 @@
 </section>
 
 <!-- 9 -->
-<section class="slide">
+<section id="s9" class="slide">
   <p class="kicker">Bezpieczeństwo</p>
   <h1>Authentication i authorization</h1>
   <div class="grid2">
@@ -273,7 +332,7 @@
 </section>
 
 <!-- 10 -->
-<section class="slide">
+<section id="s10" class="slide">
   <p class="kicker">Walidacja i błędy</p>
   <h1>Trzy poziomy walidacji, jeden format błędów</h1>
   <div class="grid3" style="margin-bottom:22px">
@@ -303,7 +362,7 @@
 </section>
 
 <!-- 11 -->
-<section class="slide">
+<section id="s11" class="slide">
   <p class="kicker">Logika biznesowa</p>
   <h1>Reguły, które chronią materiał</h1>
   <div class="grid2" style="grid-template-columns: 1fr 1fr">
@@ -333,7 +392,7 @@
 </section>
 
 <!-- 12 -->
-<section class="slide">
+<section id="s12" class="slide">
   <p class="kicker">Funkcja zaawansowana</p>
   <h1>Optymalizacja rozkroju 1D: dwie metody, jedne dane</h1>
   <div class="grid2">
@@ -355,7 +414,7 @@
 </section>
 
 <!-- 13 -->
-<section class="slide">
+<section id="s13" class="slide">
   <p class="kicker">Dla warsztatu</p>
   <h1>Plan, który da się od razu pociąć</h1>
   <div class="grid2" style="grid-template-columns: 1.05fr 1fr; align-items:start">
@@ -374,7 +433,7 @@
 </section>
 
 <!-- 14 -->
-<section class="slide">
+<section id="s14" class="slide">
   <p class="kicker">Jakość</p>
   <h1>79 testów na prawdziwym PostgreSQL + test w przeglądarce</h1>
   <div class="grid4" style="margin-bottom:22px">
@@ -394,7 +453,7 @@
 </section>
 
 <!-- 15 -->
-<section class="slide">
+<section id="s15" class="slide">
   <p class="kicker">Zakres</p>
   <h1>Wymagania projektu</h1>
   <div class="grid3">
@@ -418,7 +477,7 @@
 </section>
 
 <!-- 16 -->
-<section class="slide">
+<section id="s16" class="slide">
   <p class="kicker">Uruchomienie i dalszy rozwój</p>
   <h1>Jedna komenda, otwarta droga rozwoju</h1>
   <div class="grid2">
