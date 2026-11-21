@@ -1,0 +1,60 @@
+# CI: przy każdym pushu i pull requeście uruchamia testy backendu na PostgreSQL,
+# build frontendu (TypeScript + Vite) oraz budowanie obrazów Docker Compose.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend – testy (pytest + PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: offcut
+          POSTGRES_PASSWORD: offcut
+          POSTGRES_DB: offcut_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U offcut -d offcut_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Instalacja zależności (uv.lock)
+        run: uv sync --frozen
+      - name: Testy
+        run: uv run pytest -p no:warnings
+
+  frontend:
+    name: Frontend – build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  docker:
+    name: Docker – budowanie obrazów
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env
+      - run: docker compose build
