@@ -979,3 +979,17 @@ i.seg-remnant {
   width: 100%;
   min-width: 4.5rem;
 }
+
+/* --- Paginacja ---------------------------------------------------------------- */
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.nowrap {
+  white-space: nowrap;
+}

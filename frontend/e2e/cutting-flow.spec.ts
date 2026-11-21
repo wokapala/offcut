@@ -94,4 +94,11 @@ test('pełny przepływ planowania cięcia', async ({ page, request }) => {
     await expect(row).toHaveCount(1)
     await expect(row).toContainText('z planu')
   }
+
+  // Historia: zdarzenie wykonania zapisane asynchronicznie w dzienniku warsztatu
+  await page.getByTestId('nav-events').click()
+  const executedRow = page.locator('[data-testid^="event-row-"]', { hasText: 'Wykonanie' })
+  await expect(executedRow).toHaveCount(1)
+  await expect(executedRow).toContainText('344 mm')
+  await expect(page.getByTestId('events-pager')).toContainText('Strona 1 z')
 })

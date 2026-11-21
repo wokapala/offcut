@@ -3,6 +3,7 @@ import { useAuth } from './auth'
 import Layout from './components/Layout'
 import { Empty, Spinner } from './components/ui'
 import LoginPage from './pages/LoginPage'
+import EventsPage from './pages/EventsPage'
 import PlanPage from './pages/PlanPage'
 import ProjectPage from './pages/ProjectPage'
 import ProjectsPage from './pages/ProjectsPage'
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:id" element={<ProjectPage />} />
         <Route path="/plans/:id" element={<PlanPage />} />
+        <Route path="/events" element={<EventsPage />} />
         <Route path="*" element={<Empty>Nie ma takiej strony.</Empty>} />
       </Route>
     </Routes>

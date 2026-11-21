@@ -22,6 +22,9 @@ export default function Layout() {
             <NavLink to="/projects" data-testid="nav-projects">
               Projekty
             </NavLink>
+            <NavLink to="/events" data-testid="nav-events">
+              Historia
+            </NavLink>
           </nav>
           <div className="topbar-user">
             {user.memberships.length > 1 ? (

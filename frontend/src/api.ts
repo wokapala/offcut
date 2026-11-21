@@ -9,6 +9,25 @@ export type Method = 'GREEDY' | 'BRANCH_AND_BOUND' | 'MANUAL'
 export type SolverStatus = 'HEURISTIC' | 'OPTIMAL' | 'BEST_FOUND' | 'INFEASIBLE' | 'NO_SOLUTION_IN_LIMIT' | 'MANUAL'
 
 export interface Membership { workshop_id: number; workshop_name: string; role: Role }
+export type EventType =
+  | 'STOCK_RECEIVED'
+  | 'STOCK_DISCARDED'
+  | 'OPTIMIZATION_FINISHED'
+  | 'PLAN_RESERVED'
+  | 'PLAN_RELEASED'
+  | 'PLAN_EXECUTED'
+
+export interface WorkshopEvent {
+  id: number
+  type: EventType
+  message: string
+  actor: string | null
+  data: Record<string, unknown>
+  created_at: string
+}
+
+export interface EventPage { items: WorkshopEvent[]; total: number; limit: number; offset: number }
+
 export interface Me { id: number; email: string; full_name: string; memberships: Membership[] }
 
 export interface MaterialSpec { id: number; material: string; section: string; label: string }
@@ -222,6 +241,7 @@ export const api = {
   stockItem: (id: number) => get<StockItem>(`/stock/${id}`),
   discardStock: (id: number) => request<StockItem>('DELETE', `/stock/${id}`),
   summary: (wid: number) => get<Summary>(`/workshops/${wid}/summary`),
+  events: (wid: number, params: URLSearchParams) => get<EventPage>(`/workshops/${wid}/events?${params}`),
 
   projects: (wid: number) => get<ProjectListItem[]>(`/workshops/${wid}/projects`),
   createProject: (wid: number, body: { name: string; kerf_mm: number; min_remnant_mm: number }) =>
