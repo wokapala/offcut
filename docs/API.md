@@ -36,7 +36,7 @@ Wszystkie ścieżki zaczynają się od `/api`. Długości są liczbami całkowit
 |---|---|---|---|
 | odczyt magazynu, projektów, planów | ✔ | ✔ | 404 |
 | materiały, przyjęcie / wycofanie odcinków | ✔ | 403 | 404 |
-| projekty, zapotrzebowanie, optymalizacja, plan ręczny | ✔ | 403 | 404 |
+| projekty (także usuwanie), zapotrzebowanie, optymalizacja, plan ręczny | ✔ | 403 | 404 |
 | rezerwacja i zwolnienie rezerwacji | ✔ | 403 | 404 |
 | zatwierdzenie wykonania | ✔ | ✔ | 404 |
 | dodanie członka warsztatu | ✔ | 403 | 404 |
@@ -103,3 +103,7 @@ Typy: `STOCK_RECEIVED`, `STOCK_DISCARDED`, `OPTIMIZATION_FINISHED`, `PLAN_RESERV
 `PLAN_EXECUTED`. Wpisy tworzy asynchronicznie handler zdarzeń domenowych (`app/events.py`): endpoint po
 udanej operacji publikuje zdarzenie, a FastAPI `BackgroundTasks` zapisuje je po wysłaniu odpowiedzi.
 Ponowienie wykonania planu nie tworzy drugiego wpisu. Inny warsztat → 404, nieznany typ → 422.
+
+### `DELETE /api/projects/{id}`
+Usuwa projekt razem z zapotrzebowaniem i szkicami planów (204). Projekt z planem zarezerwowanym lub
+wykonanym nie może zostać usunięty – 409 `PROJECT_LOCKED` (historia zużycia materiału zostaje).

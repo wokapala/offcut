@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, type MaterialSpec, type OptimizeResult, type Plan, type Project } from '../api'
 import { useAuth } from '../auth'
 import OptimizeResultView from '../components/OptimizeResultView'
@@ -16,6 +16,8 @@ export default function ProjectPage() {
   const materials = useLoad(() => (wid ? api.materials(wid) : Promise.resolve([])), [wid])
   const [result, setResult] = useState<OptimizeResult | null>(null)
   const optimize = useAction()
+  const removal = useAction()
+  const navigate = useNavigate()
 
   if (project.loading && !project.data) return <Spinner />
   if (!project.data) return <ErrorAlert error={project.error} />
@@ -54,7 +56,27 @@ export default function ProjectPage() {
             <span className="muted small">utworzony {dateTime(p.created_at)}</span>
           </div>
         </div>
+        {editable && (
+          <div className="head-actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              data-testid="delete-project"
+              disabled={removal.pending}
+              onClick={() => {
+                if (!window.confirm(`Usunąć projekt „${p.name}” razem z zapotrzebowaniem i szkicami planów?`)) return
+                removal.run(async () => {
+                  await api.deleteProject(p.id)
+                  navigate('/projects')
+                })
+              }}
+            >
+              Usuń projekt
+            </button>
+          </div>
+        )}
       </div>
+      <ErrorAlert error={removal.error} onClose={removal.clearError} />
 
       {p.state !== 'OPEN' && (
         <Alert tone={p.state === 'EXECUTED' ? 'success' : 'info'} title={p.state === 'EXECUTED' ? 'Projekt wykonany' : 'Materiał zarezerwowany'}>

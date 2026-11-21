@@ -324,3 +324,28 @@ def test_requests_waiting_for_project_lock_see_the_committed_revision(api, demo,
     assert results["demand"].status_code == 201
     db.expire_all()
     assert db.get(Project, pid).revision == start + 2  # obie zmiany policzone
+
+
+def test_delete_project_crud_and_rules(api, demo):
+    pid = demo["project"]
+    plan = api.ok("POST", f"/api/projects/{pid}/optimize")["branch_and_bound"]["plan"]
+    api.ok("POST", f"/api/plans/{plan['id']}/reserve")
+    r = api.c.delete(f"/api/projects/{pid}")
+    assert r.status_code == 409 and r.json()["code"] == "PROJECT_LOCKED"  # rezerwacja blokuje usunięcie
+
+    api.ok("POST", f"/api/plans/{plan['id']}/release")
+    api.login("operator@test.pl")
+    assert api.c.delete(f"/api/projects/{pid}").status_code == 403
+    api.login("owner@test.pl")
+    assert api.c.delete(f"/api/projects/{pid}").status_code == 204
+    assert api.c.get(f"/api/projects/{pid}").status_code == 404
+    assert api.c.get(f"/api/plans/{plan['id']}").status_code == 404  # szkice planów usunięte kaskadowo
+    stock = api.ok("GET", f"/api/workshops/{demo['ws']}/stock?status=ALL")
+    assert all(s["status"] == "AVAILABLE" for s in stock)  # magazyn nietknięty
+
+
+def test_executed_project_cannot_be_deleted(api, demo):
+    plan = api.ok("POST", f"/api/projects/{demo['project']}/optimize")["branch_and_bound"]["plan"]
+    api.ok("POST", f"/api/plans/{plan['id']}/reserve")
+    api.ok("POST", f"/api/plans/{plan['id']}/execute")
+    assert api.c.delete(f"/api/projects/{demo['project']}").status_code == 409

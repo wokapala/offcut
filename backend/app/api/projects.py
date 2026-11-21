@@ -81,6 +81,17 @@ def update_project(project_id: int, body: schemas.ProjectUpdateIn, user: User = 
     return project_out(db, project)
 
 
+@router.delete("/projects/{project_id}", status_code=204, responses=CONFLICT,
+               summary="Usunięcie projektu z zapotrzebowaniem i szkicami planów (nie gdy ma rezerwację/wykonanie)")
+def delete_project(project_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    project, access = _project(db, user, project_id)
+    access.require_owner()
+    # Blokada + reguła: projektu z rezerwacją lub wykonaniem nie usuwamy (409) – historia materiału zostaje.
+    project = planning.lock_project_for_change(db, project.id)
+    db.delete(project)  # pozycje zapotrzebowania (ORM) i plany DRAFT (ON DELETE CASCADE)
+    db.commit()
+
+
 @router.post("/projects/{project_id}/demand", response_model=schemas.ProjectOut, status_code=201,
              responses=CONFLICT, summary="Dodanie pozycji zapotrzebowania (unieważnia stare plany)")
 def add_demand(project_id: int, body: schemas.DemandIn, user: User = Depends(get_current_user),

@@ -147,7 +147,7 @@ Scenariusz prezentacji: [`docs/DEMO.md`](docs/DEMO.md).
 
 ## Testy
 
-Backend – **83 testy** (jednostkowe logiki biznesowej i integracyjne REST API) działają na
+Backend – **85 testów** (jednostkowe logiki biznesowej i integracyjne REST API) działają na
 **prawdziwym PostgreSQL** (transakcje, blokady, ograniczenia), nie na SQLite. Uruchamia je też
 GitHub Actions przy każdym pushu. Lokalnie:
 
@@ -221,7 +221,7 @@ to osobny wiersz ze statusem i pochodzeniem resztki. Opis tabel i ograniczeń: [
 | Logowanie | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/register` |
 | Magazyn | `GET/POST /workshops/{id}/stock` (filtry, paginacja), `GET/DELETE /stock/{id}` |
 | Materiały | `GET/POST /workshops/{id}/materials`, `DELETE /materials/{id}` |
-| Projekty | `GET/POST /workshops/{id}/projects`, `GET/PATCH /projects/{id}` |
+| Projekty | `GET/POST /workshops/{id}/projects`, `GET/PATCH/DELETE /projects/{id}` |
 | Zapotrzebowanie | `POST /projects/{id}/demand`, `PATCH/DELETE /demand/{id}` |
 | Optymalizacja i plany | `POST /projects/{id}/optimize`, `GET /projects/{id}/plans`, `GET /plans/{id}`, `POST /plans/{id}/reserve`, `/release`, `/execute` |
 | Dziennik zdarzeń | `GET /workshops/{id}/events?type=&limit=&offset=` |

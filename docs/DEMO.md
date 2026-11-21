@@ -26,6 +26,7 @@ Konta demo (hasło `Demo1234!`): `wlasciciel@offcut.demo`, `operator@offcut.demo
 | 2:45 | **Sytuacja błędna**: w drugiej karcie (plan FFD) kliknij **Zarezerwuj materiał** | Oba plany używają resztki 1900 mm – ochrona przed podwójną rezerwacją (blokady wierszy w PostgreSQL) | „Konflikt: Materiał niedostępny … Odcinek #2 (1900 mm) jest zarezerwowany” (409) |
 | 3:05 | Wyloguj, zaloguj `operator@offcut.demo`, otwórz plan (link w banerze projektu), pokaż **Instrukcję cięcia** i przycisk „Drukuj instrukcję”, **Zatwierdź wykonanie** | Operator nie może planować ani rezerwować, może zatwierdzić wykonanie | status „Wykonany”, utworzone resztki **344 mm i 358 mm** |
 | 3:35 | **Magazyn → tylko resztki** | Resztki mają pochodzenie („z planu #…, z odcinka #…”); odcinki 1900 i 3000 są zużyte | 2 nowe resztki dostępne do kolejnych projektów |
+| 3:45 | **Historia** | Zdarzenia domenowe zapisane asynchronicznie (BackgroundTasks) – paginacja i filtr typu; wykonanie zatwierdził operator | wpisy: optymalizacja, rezerwacja, wykonanie z resztkami 344 i 358 mm |
 | 3:55 | Jako właściciel: projekt **„Stojak na drewno kominkowe”** → Optymalizuj | Większy problem (13 elementów, 10¹³ możliwych przydziałów) – „na kalkulatorze” się nie da | FFD: 14 150 mm, 8 odcinków; B&B: **10 200 mm, 4 odcinki**, „Optymalny” |
 | 4:20 | Projekt **„Listwy przypodłogowe (za mało materiału)”** → Optymalizuj (jako właściciel) | Uczciwe raportowanie braku materiału | „Brak materiału / brak planu” + komunikat z wymaganą i dostępną długością |
 | 4:40 | (opcjonalnie) Swagger `/api/docs` lub `obcy@offcut.demo` → `/projects/1` | Izolacja warsztatów – 404 również po bezpośrednim ID | „Nie znaleziono: projekt” |
@@ -63,3 +64,4 @@ Dodatkowo (jeśli jest czas): projekt „Wsporniki z profilu” – obie metody 
 | `10-konflikt-rezerwacji.png` | konflikt rezerwacji (409) |
 | `11-wiekszy-projekt-porownanie.png` | większy projekt (13 elementów) – porównanie metod |
 | `12-instrukcja-do-druku.png` | plan w widoku do druku z instrukcją cięcia |
+| `13-historia-zdarzen.png` | dziennik zdarzeń warsztatu (paginacja, filtr typu) |

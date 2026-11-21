@@ -24,7 +24,7 @@ Stan na **21.11.2026**. Zakres ze zgłoszenia projektu jest zaimplementowany i s
 
 | Sprawdzenie | Wynik |
 |---|---|
-| `cd backend && uv run pytest` (PostgreSQL 16) | 83 passed |
+| `cd backend && uv run pytest` (PostgreSQL 16) | 85 passed |
 | GitHub Actions (`.github/workflows/ci.yml`) | testy backendu, build frontendu i obrazów Docker – zielone |
 | `cd frontend && npm run build` | bez błędów |
 | `docker compose up` od pustej bazy | `db` i `backend` healthy, `/api/health` 200, Swagger 200 |
