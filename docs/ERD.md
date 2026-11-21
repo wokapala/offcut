@@ -1,6 +1,6 @@
 # Diagram ERD
 
-Diagram odpowiada migracji `backend/alembic/versions/0001_initial_schema.py` (sprawdzony z
+Diagram odpowiada migracjom `backend/alembic/versions/0001_initial_schema.py` i `0002_workshop_event_log.py` (sprawdzony z
 `information_schema` bazy po `alembic upgrade head`). GitHub renderuje blok Mermaid automatycznie;
 wersja graficzna: [`erd.png`](erd.png).
 
@@ -26,6 +26,8 @@ erDiagram
     users ||--o{ projects : "utworzył"
     users ||--o{ cutting_plans : "utworzył"
     users ||--o{ plan_executions : "zatwierdził"
+    workshops ||--o{ workshop_events : "dziennik zdarzeń"
+    users |o--o{ workshop_events : "wykonał"
 
     users {
         int id PK
@@ -134,6 +136,15 @@ erDiagram
         int executed_by_id FK
         timestamptz executed_at
     }
+    workshop_events {
+        int id PK
+        int workshop_id FK
+        varchar type "STOCK_RECEIVED | ... | PLAN_EXECUTED"
+        int actor_user_id FK "SET NULL"
+        varchar message
+        jsonb data
+        timestamptz created_at
+    }
 ```
 
 ## Najważniejsze ograniczenia
@@ -154,5 +165,6 @@ erDiagram
 | `plan_bars` | `UNIQUE(plan_id, stock_item_id)`, `UNIQUE(plan_id, position)` | odcinek raz w planie |
 | `plan_executions` | `UNIQUE(plan_id)` | plan wykonany najwyżej raz |
 
-`input_snapshot` (JSONB) przechowuje tylko kopię wejścia algorytmu (długości, kandydaci, limity) do
+`workshop_events` to dziennik zdarzeń warsztatu, zapisywany asynchronicznie przez handler zdarzeń
+domenowych (indeks `(workshop_id, created_at)` pod paginację). `input_snapshot` (JSONB) przechowuje tylko kopię wejścia algorytmu (długości, kandydaci, limity) do
 audytu – relacje planu są w tabelach `plan_bars` i `plan_pieces`.

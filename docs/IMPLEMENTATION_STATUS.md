@@ -1,6 +1,6 @@
 # Stan projektu
 
-Stan na **20.11.2026**. Zakres ze zgłoszenia projektu jest zaimplementowany i sprawdzony.
+Stan na **21.11.2026**. Zakres ze zgłoszenia projektu jest zaimplementowany i sprawdzony.
 
 ## Co działa
 
@@ -15,12 +15,17 @@ Stan na **20.11.2026**. Zakres ze zgłoszenia projektu jest zaimplementowany i s
   wykonanie planu, komunikaty konfliktów.
 * Docker Compose: `db` (healthcheck, wolumen) → `backend` (migracje) → `frontend` (nginx + proxy `/api`).
 * Dane demo – opcjonalne i idempotentne (3 konta, 4 projekty, 22 odcinki).
+* System zdarzeń domenowych: zdarzenia publikowane po udanych operacjach, obsługiwane asynchronicznie
+  (`BackgroundTasks`), zapisywane w dzienniku warsztatu (migracja `0002`) – zakładka **Historia**
+  z paginacją i filtrem typu. Magazyn: paginacja `limit`/`offset` + `X-Total-Count`.
+* CI w GitHub Actions.
 
 ## Jak sprawdzono
 
 | Sprawdzenie | Wynik |
 |---|---|
-| `cd backend && uv run pytest` (PostgreSQL 16) | 79 passed |
+| `cd backend && uv run pytest` (PostgreSQL 16) | 83 passed |
+| GitHub Actions (`.github/workflows/ci.yml`) | testy backendu, build frontendu i obrazów Docker – zielone |
 | `cd frontend && npm run build` | bez błędów |
 | `docker compose up` od pustej bazy | `db` i `backend` healthy, `/api/health` 200, Swagger 200 |
 | start bez danych demo | aplikacja działa; logowanie kontem demo odrzucone |

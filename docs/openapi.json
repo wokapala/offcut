@@ -414,7 +414,7 @@
         "tags": [
           "workshop"
         ],
-        "summary": "Magazyn odcinków i resztek z filtrami",
+        "summary": "Magazyn odcinków i resztek z filtrami i paginacją (nagłówek X-Total-Count)",
         "operationId": "list_stock_api_workshops__workshop_id__stock_get",
         "security": [
           {
@@ -483,6 +483,33 @@
               "default": false,
               "title": "Remnants Only"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "description": "Rozmiar strony",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Rozmiar strony"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Liczba pominiętych odcinków",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Liczba pominiętych odcinków"
           }
         ],
         "responses": {
@@ -1486,6 +1513,105 @@
         }
       }
     },
+    "/api/workshops/{workshop_id}/events": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Dziennik zdarzeń warsztatu – paginacja (limit/offset) i filtrowanie po typie",
+        "operationId": "list_events_api_workshops__workshop_id__events_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workshop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Workshop Id"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "STOCK_RECEIVED",
+                    "STOCK_DISCARDED",
+                    "OPTIMIZATION_FINISHED",
+                    "PLAN_RESERVED",
+                    "PLAN_RELEASED",
+                    "PLAN_EXECUTED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtr po typie zdarzenia",
+              "title": "Type"
+            },
+            "description": "Filtr po typie zdarzenia"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -1698,6 +1824,93 @@
         },
         "type": "object",
         "title": "DemandUpdateIn"
+      },
+      "EventOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "STOCK_RECEIVED",
+              "STOCK_DISCARDED",
+              "OPTIMIZATION_FINISHED",
+              "PLAN_RESERVED",
+              "PLAN_RELEASED",
+              "PLAN_EXECUTED"
+            ],
+            "title": "Type"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "message",
+          "actor",
+          "data",
+          "created_at"
+        ],
+        "title": "EventOut"
+      },
+      "EventPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EventOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Liczba wszystkich zdarzeń spełniających filtr"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "EventPage"
       },
       "ExecuteOut": {
         "properties": {

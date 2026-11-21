@@ -89,8 +89,17 @@ walidatorem bilansu co wyniki algorytmów. 422 `INVALID_PLAN` z listą problemó
 elementy się nie mieszczą z rzazem, niepełne pokrycie). Dostępny tylko przez API.
 
 ### Magazyn
-`GET /api/workshops/{id}/stock?status=AVAILABLE|RESERVED|CONSUMED|DISCARDED|ALL&material_spec_id=&remnants_only=`
-– każdy odcinek osobno, z pochodzeniem (`parent_stock_id`, `source_plan_id`).
+`GET /api/workshops/{id}/stock?status=AVAILABLE|RESERVED|CONSUMED|DISCARDED|ALL&material_spec_id=&remnants_only=&limit=100&offset=0`
+– każdy odcinek osobno, z pochodzeniem (`parent_stock_id`, `source_plan_id`). **Paginacja:** `limit`
+(1–500) i `offset`; łączna liczba wyników (po filtrach) w nagłówku `X-Total-Count`.
 `POST /api/workshops/{id}/stock` `{"material_spec_id", "length_mm", "quantity", "is_remnant", "label"}`
 tworzy `quantity` osobnych odcinków. `DELETE /api/stock/{id}` wycofuje odcinek (`DISCARDED`) – historia
 zostaje.
+
+### Dziennik zdarzeń (paginacja, filtrowanie, zdarzenia asynchroniczne)
+`GET /api/workshops/{id}/events?type=PLAN_EXECUTED&limit=20&offset=0` →
+`{"items": [...], "total": 7, "limit": 20, "offset": 0}`, od najnowszych.
+Typy: `STOCK_RECEIVED`, `STOCK_DISCARDED`, `OPTIMIZATION_FINISHED`, `PLAN_RESERVED`, `PLAN_RELEASED`,
+`PLAN_EXECUTED`. Wpisy tworzy asynchronicznie handler zdarzeń domenowych (`app/events.py`): endpoint po
+udanej operacji publikuje zdarzenie, a FastAPI `BackgroundTasks` zapisuje je po wysłaniu odpowiedzi.
+Ponowienie wykonania planu nie tworzy drugiego wpisu. Inny warsztat → 404, nieznany typ → 422.

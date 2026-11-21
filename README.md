@@ -1,5 +1,7 @@
 # Offcut — optymalizacja cięcia materiałów i wykorzystania resztek
 
+[![CI](https://github.com/wokapala/offcut/actions/workflows/ci.yml/badge.svg)](https://github.com/wokapala/offcut/actions/workflows/ci.yml)
+
 Aplikacja webowa dla majsterkowiczów i małych warsztatów. Na podstawie fizycznych odcinków w magazynie
 (nowych listew i resztek z wcześniejszych prac) oraz zapotrzebowania (długość × liczba sztuk) wylicza
 plan cięcia z uwzględnieniem **szerokości rzazu**, porównuje **heurystykę zachłanną** z dokładniejszym
@@ -7,6 +9,8 @@ plan cięcia z uwzględnieniem **szerokości rzazu**, porównuje **heurystykę z
 i zapisuje użyteczne resztki.
 
 Projekt indywidualny z przedmiotu ZTPAI (Politechnika Krakowska, zima 2026/27).
+
+**Demo video (3–5 min):** _link do nagrania – do uzupełnienia_ · **Prezentacja:** [`docs/prezentacja.pdf`](docs/prezentacja.pdf)
 
 ## Funkcjonalności
 
@@ -22,7 +26,10 @@ Projekt indywidualny z przedmiotu ZTPAI (Politechnika Krakowska, zima 2026/27).
 * rezerwacja materiału z ochroną przed podwójną rezerwacją (blokady w PostgreSQL),
 * zatwierdzanie wykonania – idempotentne, atomowe zużycie odcinków i zapis resztek do magazynu,
 * unieważnianie planów po zmianie zapotrzebowania lub parametrów,
-* plan ręczny przez API (ten sam walidator bilansu co algorytmy).
+* plan ręczny przez API (ten sam walidator bilansu co algorytmy),
+* **dziennik zdarzeń warsztatu** (przyjęcia, optymalizacje, rezerwacje, wykonania) zapisywany
+  **asynchronicznie** przez system zdarzeń domenowych, z **paginacją** i filtrem typu,
+* filtrowanie i paginacja magazynu (`limit` / `offset`, nagłówek `X-Total-Count`).
 
 ## Stack
 
@@ -32,6 +39,7 @@ Projekt indywidualny z przedmiotu ZTPAI (Politechnika Krakowska, zima 2026/27).
 | Baza | PostgreSQL 16 |
 | Frontend | React 19, TypeScript, Vite, react-router |
 | Testy | pytest (na PostgreSQL), Playwright (przepływ w przeglądarce) |
+| CI | GitHub Actions: testy backendu na PostgreSQL, build frontendu, build obrazów Docker |
 | Uruchomienie | Docker Compose (PostgreSQL + backend + nginx z frontendem) |
 
 Zależności są zablokowane: `backend/uv.lock` (+ `backend/requirements.txt` z hashami dla obrazu Docker),
@@ -139,7 +147,9 @@ Scenariusz prezentacji: [`docs/DEMO.md`](docs/DEMO.md).
 
 ## Testy
 
-Backend – testy działają na **prawdziwym PostgreSQL** (transakcje, blokady, ograniczenia), nie na SQLite:
+Backend – **83 testy** (jednostkowe logiki biznesowej i integracyjne REST API) działają na
+**prawdziwym PostgreSQL** (transakcje, blokady, ograniczenia), nie na SQLite. Uruchamia je też
+GitHub Actions przy każdym pushu. Lokalnie:
 
 ```bash
 docker compose -f docker-compose.test.yml up -d
@@ -192,6 +202,43 @@ Plan wykonany – resztki wracają do magazynu:
 ![Plan wykonany](docs/screenshots/07-plan-wykonany.png)
 
 Pozostałe ekrany: [`docs/screenshots/`](docs/screenshots/).
+
+## Model danych (ERD)
+
+12 tabel (migracje Alembic `0001`, `0002`). Najważniejsza jest `stock_items` – każdy fizyczny odcinek
+to osobny wiersz ze statusem i pochodzeniem resztki. Opis tabel i ograniczeń: [`docs/ERD.md`](docs/ERD.md).
+
+![Diagram ERD](docs/erd.png)
+
+## Dokumentacja REST API
+
+* Swagger UI (OpenAPI) po uruchomieniu: **http://localhost:8080/api/docs**; specyfikacja w repo:
+  [`docs/openapi.json`](docs/openapi.json),
+* opis kluczowych operacji, uprawnień i kodów błędów: [`docs/API.md`](docs/API.md).
+
+| Zasób | Endpointy (prefiks `/api`) |
+|---|---|
+| Logowanie | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/register` |
+| Magazyn | `GET/POST /workshops/{id}/stock` (filtry, paginacja), `GET/DELETE /stock/{id}` |
+| Materiały | `GET/POST /workshops/{id}/materials`, `DELETE /materials/{id}` |
+| Projekty | `GET/POST /workshops/{id}/projects`, `GET/PATCH /projects/{id}` |
+| Zapotrzebowanie | `POST /projects/{id}/demand`, `PATCH/DELETE /demand/{id}` |
+| Optymalizacja i plany | `POST /projects/{id}/optimize`, `GET /projects/{id}/plans`, `GET /plans/{id}`, `POST /plans/{id}/reserve`, `/release`, `/execute` |
+| Dziennik zdarzeń | `GET /workshops/{id}/events?type=&limit=&offset=` |
+
+Błędy mają jednolity format `{"detail", "code", "problems"}`: 401, 403, 404, 409, 422.
+
+## Elementy rozszerzone
+
+* **Mechanizm asynchroniczny – system zdarzeń domenowych** (`backend/app/events.py`): po udanej
+  operacji endpoint publikuje zdarzenie (np. `PLAN_EXECUTED`), a handlery wykonują się jako zadania
+  w tle FastAPI (`BackgroundTasks`) – po wysłaniu odpowiedzi, we własnej sesji bazy. Handler zapisuje
+  dziennik zdarzeń warsztatu widoczny w zakładce **Historia**.
+* **CI w GitHub Actions** (`.github/workflows/ci.yml`): testy backendu na PostgreSQL, build frontendu
+  i build obrazów Docker przy każdym pushu.
+* **Kontrola współbieżności**: rezerwacja chroniona blokadami wierszy PostgreSQL (`SELECT … FOR UPDATE`),
+  a plany są wersjonowane rewizją projektu – plan wygenerowany dla starej wersji danych jest odrzucany
+  (409 `STALE_PLAN`).
 
 ## Funkcja zaawansowana: optymalizacja rozkroju 1D
 
