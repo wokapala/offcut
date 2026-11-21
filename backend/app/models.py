@@ -323,3 +323,37 @@ class PlanExecution(Base):
         viewonly=True,
         order_by="StockItem.id",
     )
+
+
+EVENT_TYPES = (
+    "STOCK_RECEIVED",
+    "STOCK_DISCARDED",
+    "OPTIMIZATION_FINISHED",
+    "PLAN_RESERVED",
+    "PLAN_RELEASED",
+    "PLAN_EXECUTED",
+)
+
+
+class WorkshopEvent(Base):
+    """Dziennik zdarzeń warsztatu – zapisywany asynchronicznie przez handler zdarzeń domenowych."""
+
+    __tablename__ = "workshop_events"
+    __table_args__ = (
+        CheckConstraint(
+            "type IN (" + ", ".join(f"'{t}'" for t in EVENT_TYPES) + ")", name="ck_event_type"
+        ),
+        Index("ix_event_workshop_created", "workshop_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    workshop_id: Mapped[int] = mapped_column(
+        ForeignKey("workshops.id", ondelete="CASCADE"), nullable=False
+    )
+    type: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    message: Mapped[str] = mapped_column(String(300), nullable=False)
+    data: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = _now_col()
+
+    actor: Mapped[User | None] = relationship()

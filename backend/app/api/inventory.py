@@ -2,14 +2,15 @@
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import schemas
 from app.api.serializers import spec_out, stock_out_many
 from app.db import get_db
+from app.events import DomainEvent, publish
 from app.deps import get_current_user, load_scoped, workshop_access
 from app.errors import Conflict, NotFound
 from app.models import (
@@ -113,12 +114,15 @@ def _spec_in_workshop(db: Session, spec_id: int, workshop_id: int) -> MaterialSp
 
 
 @router.get("/workshops/{workshop_id}/stock", response_model=list[schemas.StockOut],
-            summary="Magazyn odcinków i resztek z filtrami")
+            summary="Magazyn odcinków i resztek z filtrami i paginacją (nagłówek X-Total-Count)")
 def list_stock(
     workshop_id: int,
+    response: Response,
     status: schemas.StockStatus | Literal["ALL"] = Query("AVAILABLE"),
     material_spec_id: int | None = None,
     remnants_only: bool = False,
+    limit: int = Query(100, ge=1, le=500, description="Rozmiar strony"),
+    offset: int = Query(0, ge=0, description="Liczba pominiętych odcinków"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -130,14 +134,17 @@ def list_stock(
         stmt = stmt.where(StockItem.material_spec_id == material_spec_id)
     if remnants_only:
         stmt = stmt.where(StockItem.is_remnant.is_(True))
-    items = list(db.scalars(stmt.order_by(StockItem.material_spec_id, StockItem.length_mm.desc(), StockItem.id)))
+    # Paginacja: łączna liczba wyników w nagłówku X-Total-Count, treść = bieżąca strona.
+    response.headers["X-Total-Count"] = str(db.scalar(select(func.count()).select_from(stmt.subquery())))
+    stmt = stmt.order_by(StockItem.material_spec_id, StockItem.length_mm.desc(), StockItem.id)
+    items = list(db.scalars(stmt.limit(limit).offset(offset)))
     return stock_out_many(db, items)
 
 
 @router.post("/workshops/{workshop_id}/stock", response_model=list[schemas.StockOut], status_code=201,
              summary="Przyjęcie odcinków na magazyn (każda sztuka jako osobny odcinek)")
-def create_stock(workshop_id: int, body: schemas.StockCreateIn, user: User = Depends(get_current_user),
-                 db: Session = Depends(get_db)):
+def create_stock(workshop_id: int, body: schemas.StockCreateIn, background: BackgroundTasks,
+                 user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     workshop_access(db, user, workshop_id).require_owner()
     _spec_in_workshop(db, body.material_spec_id, workshop_id)
     items = [
@@ -147,7 +154,14 @@ def create_stock(workshop_id: int, body: schemas.StockCreateIn, user: User = Dep
     ]
     db.add_all(items)
     db.commit()
-    return stock_out_many(db, items)
+    out = stock_out_many(db, items)
+    kind = "resztek" if body.is_remnant else "odcinków"
+    publish(background, DomainEvent(
+        "STOCK_RECEIVED", workshop_id, user.id,
+        f"Przyjęto {body.quantity} {kind} {out[0].spec_label} po {body.length_mm} mm",
+        {"stock_ids": [s.id for s in items], "length_mm": body.length_mm},
+    ))
+    return out
 
 
 @router.get("/stock/{stock_id}", response_model=schemas.StockOut, summary="Szczegóły odcinka z pochodzeniem")
@@ -158,7 +172,8 @@ def get_stock(stock_id: int, user: User = Depends(get_current_user), db: Session
 
 @router.delete("/stock/{stock_id}", response_model=schemas.StockOut,
                summary="Wycofanie odcinka z magazynu (status DISCARDED, historia zostaje)")
-def discard_stock(stock_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def discard_stock(stock_id: int, background: BackgroundTasks, user: User = Depends(get_current_user),
+                  db: Session = Depends(get_db)):
     item, access = load_scoped(db, user, StockItem, stock_id, lambda s: s.workshop_id, "odcinek",
                                for_update=True)
     access.require_owner()
@@ -167,4 +182,8 @@ def discard_stock(stock_id: int, user: User = Depends(get_current_user), db: Ses
                        code="STOCK_NOT_AVAILABLE")
     item.status = DISCARDED
     db.commit()
-    return stock_out_many(db, [item])[0]
+    out = stock_out_many(db, [item])[0]
+    publish(background, DomainEvent("STOCK_DISCARDED", item.workshop_id, user.id,
+                                    f"Wycofano odcinek #{item.id} ({out.spec_label}, {item.length_mm} mm)",
+                                    {"stock_id": item.id}))
+    return out

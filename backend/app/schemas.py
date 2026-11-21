@@ -299,3 +299,25 @@ class ExecuteOut(BaseModel):
     plan: PlanOut
     already_executed: bool = Field(description="True przy ponowieniu – nic nie zużyto drugi raz")
     remnants: list[StockOut]
+
+
+# --- Dziennik zdarzeń (paginacja) -----------------------------------------------------
+
+EventType = Literal["STOCK_RECEIVED", "STOCK_DISCARDED", "OPTIMIZATION_FINISHED", "PLAN_RESERVED",
+                    "PLAN_RELEASED", "PLAN_EXECUTED"]
+
+
+class EventOut(BaseModel):
+    id: int
+    type: EventType
+    message: str
+    actor: str | None
+    data: dict
+    created_at: datetime
+
+
+class EventPage(BaseModel):
+    items: list[EventOut]
+    total: int = Field(description="Liczba wszystkich zdarzeń spełniających filtr")
+    limit: int
+    offset: int

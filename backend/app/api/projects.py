@@ -1,15 +1,16 @@
 """Projekty cięcia, zapotrzebowanie, optymalizacja i przepływ planu."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import schemas
 from app.api.serializers import optimize_out, plan_out, project_out, stock_out_many
 from app.db import get_db
+from app.events import DomainEvent, publish
 from app.deps import get_current_user, load_scoped, workshop_access
 from app.errors import NotFound
-from app.models import CuttingPlan, DemandItem, MaterialSpec, Project, StockItem, User
+from app.models import CuttingPlan, DemandItem, MaterialSpec, Project, StockItem, User, WorkshopEvent
 from app.services import planning, workflow
 
 router = APIRouter(prefix="/api", tags=["projects"])
@@ -135,10 +136,18 @@ def delete_demand(demand_id: int, user: User = Depends(get_current_user), db: Se
 @router.post("/projects/{project_id}/optimize", response_model=schemas.OptimizeOut, responses={
     **CONFLICT, 422: {"description": "Brak zapotrzebowania lub zbyt duży problem"}},
     summary="Optymalizacja rozkroju: heurystyka FFD i branch and bound dla tych samych danych")
-def optimize(project_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def optimize(project_id: int, background: BackgroundTasks, user: User = Depends(get_current_user),
+             db: Session = Depends(get_db)):
     project, access = _project(db, user, project_id)
     access.require_owner()
-    return optimize_out(db, planning.optimize_project(db, project, user))
+    out = optimize_out(db, planning.optimize_project(db, project, user))
+    g, b = out.greedy, out.branch_and_bound
+    summary = (f"FFD {g.plan.total_stock_mm} mm, B&B {b.plan.total_stock_mm} mm ({b.status})"
+               if g.plan and b.plan else f"B&B: {b.status}")
+    publish(background, DomainEvent("OPTIMIZATION_FINISHED", project.workshop_id, user.id,
+                                    f"Optymalizacja projektu „{project.name}”: {summary}",
+                                    {"project_id": project.id, "run_id": out.run_id}))
+    return out
 
 
 @router.get("/projects/{project_id}/plans", response_model=list[schemas.PlanOut],
@@ -165,6 +174,13 @@ def manual_plan(project_id: int, body: schemas.ManualPlanIn, user: User = Depend
 # --- Plany ---------------------------------------------------------------------------
 
 
+def _plan_event(background: BackgroundTasks, event_type: str, plan: CuttingPlan, user: User, message: str,
+                data: dict | None = None) -> None:
+    publish(background, DomainEvent(event_type, plan.project.workshop_id, user.id,
+                                    f"{message} (projekt „{plan.project.name}”)",
+                                    {"plan_id": plan.id, "project_id": plan.project_id, **(data or {})}))
+
+
 @router.get("/plans/{plan_id}", response_model=schemas.PlanOut,
             summary="Szczegóły planu: odcinki, elementy, rzaz, resztki, statystyki")
 def get_plan(plan_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -174,20 +190,32 @@ def get_plan(plan_id: int, user: User = Depends(get_current_user), db: Session =
 
 @router.post("/plans/{plan_id}/reserve", response_model=schemas.PlanOut, responses=CONFLICT,
              summary="Rezerwacja odcinków planu (właściciel). 409 gdy odcinek zajęty lub plan nieaktualny")
-def reserve(plan_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return plan_out(db, workflow.reserve_plan(db, user, plan_id))
+def reserve(plan_id: int, background: BackgroundTasks, user: User = Depends(get_current_user),
+            db: Session = Depends(get_db)):
+    plan = workflow.reserve_plan(db, user, plan_id)
+    _plan_event(background, "PLAN_RESERVED", plan, user, f"Zarezerwowano materiał dla planu #{plan.id}")
+    return plan_out(db, plan)
 
 
 @router.post("/plans/{plan_id}/release", response_model=schemas.PlanOut, responses=CONFLICT,
              summary="Zwolnienie rezerwacji: plan wraca do DRAFT, odcinki do AVAILABLE")
-def release(plan_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return plan_out(db, workflow.release_plan(db, user, plan_id))
+def release(plan_id: int, background: BackgroundTasks, user: User = Depends(get_current_user),
+            db: Session = Depends(get_db)):
+    plan = workflow.release_plan(db, user, plan_id)
+    _plan_event(background, "PLAN_RELEASED", plan, user, f"Zwolniono rezerwację planu #{plan.id}")
+    return plan_out(db, plan)
 
 
 @router.post("/plans/{plan_id}/execute", response_model=schemas.ExecuteOut, responses=CONFLICT,
              summary="Zatwierdzenie wykonania (właściciel lub operator). Idempotentne przy ponowieniu")
-def execute(plan_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def execute(plan_id: int, background: BackgroundTasks, user: User = Depends(get_current_user),
+            db: Session = Depends(get_db)):
     plan, remnants, already = workflow.execute_plan(db, user, plan_id)
+    if not already:  # ponowienie żądania nie generuje drugiego zdarzenia
+        lengths = ", ".join(f"{r.length_mm} mm" for r in remnants) or "brak"
+        _plan_event(background, "PLAN_EXECUTED", plan, user,
+                    f"Wykonano plan #{plan.id}; nowe resztki: {lengths}",
+                    {"remnant_stock_ids": [r.id for r in remnants]})
     return schemas.ExecuteOut(plan=plan_out(db, plan), already_executed=already,
                               remnants=stock_out_many(db, remnants))
 
@@ -200,3 +228,26 @@ def summary(workshop_id: int, user: User = Depends(get_current_user), db: Sessio
         .where(StockItem.workshop_id == workshop_id).group_by(StockItem.status)
     ).all()
     return {status: {"count": c, "length_mm": int(s)} for status, c, s in rows}
+
+
+@router.get("/workshops/{workshop_id}/events", response_model=schemas.EventPage,
+            summary="Dziennik zdarzeń warsztatu – paginacja (limit/offset) i filtrowanie po typie")
+def list_events(
+    workshop_id: int,
+    type: schemas.EventType | None = Query(None, description="Filtr po typie zdarzenia"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    workshop_access(db, user, workshop_id)
+    stmt = select(WorkshopEvent).where(WorkshopEvent.workshop_id == workshop_id)
+    if type is not None:
+        stmt = stmt.where(WorkshopEvent.type == type)
+    total = db.scalar(select(func.count()).select_from(stmt.subquery()))
+    rows = db.scalars(stmt.order_by(WorkshopEvent.created_at.desc(), WorkshopEvent.id.desc())
+                      .limit(limit).offset(offset))
+    items = [schemas.EventOut(id=e.id, type=e.type, message=e.message,
+                              actor=e.actor.full_name if e.actor else None, data=e.data,
+                              created_at=e.created_at) for e in rows]
+    return schemas.EventPage(items=items, total=total, limit=limit, offset=offset)
